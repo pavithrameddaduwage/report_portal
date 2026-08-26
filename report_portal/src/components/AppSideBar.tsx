@@ -8,6 +8,8 @@ import { findAllWorkspaces } from "@/services/workspace-services";
 import { findUserByEmail } from "@/services/user-service";
 import { getUserPermissions, UserPermissions } from "@/lib/permissions";
 
+import Image from "next/image";
+
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,9 +79,11 @@ export function AppSidebar() {
     <aside className="w-[240px] bg-[#0b2138] text-white flex flex-col h-screen shrink-0 select-none z-30">
       {/* Brand Header */}
       <div className="px-5 py-6 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#2f8fe0] text-white flex items-center justify-center font-bold text-base shadow-sm">
-          H
-        </div>
+        <img
+          src="/report-portal/logo.png"
+          alt="Horizon Logo"
+          className="w-8 h-8 object-contain shrink-0"
+        />
         <div className="flex flex-col">
           <span className="text-white font-bold text-[11px] tracking-wider uppercase leading-tight">HORIZON GROUP USA</span>
           <span className="text-[#5aa8ea] text-[11px] font-medium leading-tight">Report Portal</span>

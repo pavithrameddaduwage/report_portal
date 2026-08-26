@@ -11,6 +11,8 @@ import { login } from '@/services/authentication-service';
 import { toast } from 'sonner';
 import { Lock, User, Loader2, ArrowRight } from 'lucide-react';
 
+import Image from 'next/image';
+
 const loginSchema = z.object({
   username: z.string().min(2, { message: 'Username is required' }),
   password: z.string().min(1, { message: 'Password is required' }),
@@ -62,9 +64,11 @@ export default function LoginPage() {
       <div className="w-full max-w-[390px] relative z-10">
         {/* Brand Header */}
         <div className="text-center mb-7 flex flex-col items-center">
-          <div className="w-12 h-12 rounded-xl bg-[#0b2138] text-white flex items-center justify-center font-bold text-xl shadow-md mb-3">
-            <span className="text-[#2f8fe0]">H</span>
-          </div>
+          <img
+            src="/report-portal/logo.png"
+            alt="Horizon Logo"
+            className="w-14 h-14 object-contain mb-3 drop-shadow-sm"
+          />
           <span className="text-[12px] font-bold text-[#0b2138] tracking-widest uppercase">
             HORIZON GROUP USA
           </span>
