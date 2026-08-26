@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-poppins), "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --color-navy-900: #0a1c30;
+  --color-navy-800: #0e2947;
+  --color-navy-700: #123457;
+  --color-blue-500: #2f8fe0;
+  --color-blue-400: #5aa8ea;
+  --color-blue-050: #f0f6fc;
+  --color-custom-bg: #f6f9fc;
+  --color-custom-card: #ffffff;
+  --color-custom-border: #dce6f1;
+  --color-text-900: #0f2b48;
+  --color-text-600: #335375;
+  --color-text-400: #5c7f9f;
+  --color-green-600: #178a4c;
+  --color-green-050: #e7f7ee;
+  --color-amber-600: #b9700a;
+  --color-amber-050: #fdf1de;
+  --color-red-600: #d33a3a;
+  --color-red-050: #fbeaea;
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: #f6f9fc;
+  --foreground: #0f2b48;
+  --card: #ffffff;
+  --card-foreground: #0f2b48;
+  --popover: #ffffff;
+  --popover-foreground: #0f2b48;
+  --primary: #0e2947;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f6fc;
+  --secondary-foreground: #2f8fe0;
+  --muted: #f6f9fc;
+  --muted-foreground: #5c7f9f;
+  --accent: #f0f6fc;
+  --accent-foreground: #2f8fe0;
+  --destructive: #d33a3a;
+  --border: #dce6f1;
+  --input: #dce6f1;
+  --ring: #2f8fe0;
+
+  --sidebar: #0b2138;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #2f8fe0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #15385e;
+  --sidebar-ring: #2f8fe0;
+
+  /* Horizon Report Portal Softened Palette Tokens */
+  --navy-900: #0a1c30;
+  --navy-800: #0e2947;
+  --navy-700: #123457;
+  --blue-500: #2f8fe0;
+  --blue-400: #5aa8ea;
+  --blue-050: #f0f6fc;
+  --custom-bg: #f6f9fc;
+  --custom-card: #ffffff;
+  --custom-border: #dce6f1;
+  --text-900: #0f2b48;
+  --text-600: #335375;
+  --text-400: #5c7f9f;
+  --green-600: #178a4c;
+  --green-050: #e7f7ee;
+  --amber-600: #b9700a;
+  --amber-050: #fdf1de;
+  --red-600: #d33a3a;
+  --red-050: #fbeaea;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    font-family: var(--font-poppins), "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  }
+  body {
+    @apply bg-custom-bg text-text-900 antialiased;
+    font-family: var(--font-poppins), "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    background-color: #f6f9fc !important;
+    color: #0f2b48 !important;
+  }
+}
