@@ -1,5 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, ILike } from 'typeorm';
+import { User } from '../users/entities/user.entity';
 import { ADUser } from './interfaces/ad-user.interface';
 
 const ActiveDirectory = require('activedirectory2').promiseWrapper;
@@ -23,7 +26,11 @@ const ad = new ActiveDirectory(config);
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
   async authenticateuser(username: string, password: string): Promise<boolean> {
     try {
@@ -71,6 +78,7 @@ export class AuthService {
         name: 'Admin',
         userid: 0,
         roles: ['Admin', 'admin'],
+        is_admin: true,
         department: 'MIS',
         location: null,
       };
@@ -100,9 +108,8 @@ export class AuthService {
       }
       
       if (!aduser || !aduser.mail) {
-        // Mock fallback if AD details are missing
         aduser = {
-          mail: `${username}@hgusa.com`,
+          mail: `${username}@horizongroupusa.com`,
           cn: username,
           department: null,
           location: null
@@ -111,11 +118,36 @@ export class AuthService {
       email = aduser.mail.toLowerCase();
     }
 
+    // Role check & First Login Superadmin appointment
+    let isUserAdmin = false;
+    try {
+      const totalUsersCount = await this.userRepository.count();
+      const existingDbUser = await this.userRepository.findOne({
+        where: { email: ILike(email) },
+      });
+
+      if (totalUsersCount === 0) {
+        // First user to ever log in is automatically appointed as Administrator!
+        console.log(`[First-Time Setup] No users in database. Appointing first login user (${email}) as Administrator.`);
+        const firstAdmin = new User();
+        firstAdmin.name = aduser.cn || username;
+        firstAdmin.email = email;
+        firstAdmin.is_admin = true;
+        await this.userRepository.save(firstAdmin);
+        isUserAdmin = true;
+      } else if (existingDbUser) {
+        isUserAdmin = Boolean(existingDbUser.is_admin);
+      }
+    } catch (dbError) {
+      console.warn('User DB lookup warning on login:', dbError?.message);
+    }
+
     const payload = {
       email: email,
       name: aduser.cn || username,
       userid: username,
-      roles: ['User'],
+      roles: isUserAdmin ? ['Admin', 'User'] : ['User'],
+      is_admin: isUserAdmin,
       department: aduser.department,
       location: aduser.location
     };

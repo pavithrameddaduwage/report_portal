@@ -1,6 +1,7 @@
 import {
   HttpException,
   Injectable,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,7 +17,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -27,6 +28,55 @@ export class UsersService {
     private httpService: HttpService,
   ) {}
 
+  async onModuleInit() {
+    await this.seedDefaultRolesAndPermissions();
+  }
+
+  async seedDefaultRolesAndPermissions() {
+    try {
+      const existing = await this.roleRepository.find();
+      if (!existing || existing.length === 0) {
+        console.log('[Bootstrap] Initializing Role & Permission Master Data in PostgreSQL...');
+        const defaultRoles = [
+          {
+            role: 'Admin',
+            permissions: JSON.stringify([
+              'report_config',
+              'display_view',
+              'workspace_management',
+              'user_management',
+              'roles_permissions',
+              'csv_export',
+              'filter_sort',
+            ]),
+          },
+          {
+            role: 'User',
+            permissions: JSON.stringify(['csv_export', 'filter_sort']),
+          },
+          {
+            role: 'Viewer',
+            permissions: JSON.stringify(['filter_sort']),
+          },
+          {
+            role: 'Manager',
+            permissions: JSON.stringify(['workspace_management', 'csv_export', 'filter_sort']),
+          },
+        ];
+
+        for (const r of defaultRoles) {
+          const roleObj = new RoleMaster();
+          roleObj.role = r.role;
+          roleObj.permissions = r.permissions;
+          await this.roleRepository.save(roleObj);
+        }
+        console.log('[Bootstrap] Role & Permission Master Data created successfully.');
+      }
+    } catch (err) {
+      console.warn('[Bootstrap] Role seeding notice:', err?.message);
+    }
+  }
+
   findAllUsers() {
     return this.userRepository.find({
       relations: ['workspaces', 'reports', 'displayviews'],
@@ -34,7 +84,6 @@ export class UsersService {
   }
 
   async createUser(user: any) {
-    console.log(user);
     let reports: Report[] = [];
     let workspaces: Workspace[] = [];
     let displayviews: DisplayView[] = [];
@@ -97,7 +146,7 @@ export class UsersService {
           ),
         );
       } catch (error) {
-        console.log('External assignment error:', error?.message);
+        console.log('External assignment notice:', error?.message);
       }
 
       return output;
@@ -124,20 +173,9 @@ export class UsersService {
     try {
       const roles = await this.roleRepository.find({ order: { id: 'ASC' } });
       if (!roles || roles.length === 0) {
-        const defaultRoles = [
-          { role: 'Admin', permissions: JSON.stringify(['report_config', 'display_view', 'workspace_management', 'user_management', 'roles_permissions', 'csv_export', 'filter_sort']) },
-          { role: 'User', permissions: JSON.stringify(['csv_export', 'filter_sort']) },
-        ];
-        for (const r of defaultRoles) {
-          try {
-            const roleObj = new RoleMaster();
-            roleObj.role = r.role;
-            roleObj.permissions = r.permissions;
-            await this.roleRepository.save(roleObj);
-          } catch (e) {}
-        }
+        await this.seedDefaultRolesAndPermissions();
         const fresh = await this.roleRepository.find({ order: { id: 'ASC' } });
-        return fresh.map((f) => ({
+        return (fresh || []).map((f) => ({
           ...f,
           permissions: f.permissions ? JSON.parse(f.permissions) : [],
         }));
