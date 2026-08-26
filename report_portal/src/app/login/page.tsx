@@ -141,9 +141,12 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-[11px] text-[#5c7f9f] mt-6 flex items-center justify-center gap-1">
-          <span>Powered by</span>
-          <span className="font-semibold text-[#0b2138]">Team MIS</span>
+        <div className="text-center text-[10px] text-[#8aa6bf] mt-6 flex flex-col items-center gap-0.5 select-none">
+          <div className="flex items-center gap-1 text-[11px] text-[#5c7f9f]">
+            <span>Powered by</span>
+            <span className="font-semibold text-[#0b2138]">Team MIS</span>
+          </div>
+          <span>© Copyright Team MIS</span>
         </div>
       </div>
     </div>
