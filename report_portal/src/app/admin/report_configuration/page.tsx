@@ -426,37 +426,37 @@ const ReportConfiguration = () => {
                   Columns
                 </span>
                 <div className="border border-[#c8dced] rounded-lg overflow-x-auto">
-                  <Table className="text-xs min-w-[420px]">
-                    <TableHeader className="bg-[#dbe9f6]">
-                      <TableRow className="border-[#c8dced]">
-                        <TableHead className="w-[40px]"></TableHead>
-                        <TableHead className="w-[50px] text-[11px] font-bold text-[#0a1c30] uppercase text-center whitespace-nowrap">
-                          ORDER
-                        </TableHead>
-                        <TableHead className="w-[50px] text-[11px] font-bold text-[#0a1c30] uppercase text-center whitespace-nowrap">
-                          HIDE
-                        </TableHead>
-                        <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                          COLUMN NAME
-                        </TableHead>
-                        <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                          DISPLAY NAME
-                        </TableHead>
-                        <TableHead className="w-[140px] text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                          FILTER TYPE
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext
-                          items={columns.map((c) => c.column)}
-                          strategy={verticalListSortingStrategy}
-                        >
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={columns.map((c) => c.column)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <Table className="text-xs min-w-[420px]">
+                        <TableHeader className="bg-[#dbe9f6]">
+                          <TableRow className="border-[#c8dced]">
+                            <TableHead className="w-[40px]"></TableHead>
+                            <TableHead className="w-[50px] text-[11px] font-bold text-[#0a1c30] uppercase text-center whitespace-nowrap">
+                              ORDER
+                            </TableHead>
+                            <TableHead className="w-[50px] text-[11px] font-bold text-[#0a1c30] uppercase text-center whitespace-nowrap">
+                              HIDE
+                            </TableHead>
+                            <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
+                              COLUMN NAME
+                            </TableHead>
+                            <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
+                              DISPLAY NAME
+                            </TableHead>
+                            <TableHead className="w-[140px] text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
+                              FILTER TYPE
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {columns.map((col: any, index: number) => (
                             <SortableColumnRow
                               key={col.column}
@@ -466,10 +466,10 @@ const ReportConfiguration = () => {
                               handleSelectFilterType={handleSelectFilterType}
                             />
                           ))}
-                        </SortableContext>
-                      </DndContext>
-                    </TableBody>
-                  </Table>
+                        </TableBody>
+                      </Table>
+                    </SortableContext>
+                  </DndContext>
                 </div>
               </div>
             )}

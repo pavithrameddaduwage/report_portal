@@ -38,6 +38,8 @@ import { DataSource } from 'typeorm';
       password: process.env.DW_PASSWORD || process.env.DB_PASSWORD || 'Belpostgre123',
       database: process.env.DW_NAME || process.env.DB_NAME || 'report_portal_db',
       synchronize: false,
+      retryAttempts: 2,
+      retryDelay: 2000,
     }),
 
     WorkspaceModule,

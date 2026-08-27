@@ -1,12 +1,9 @@
-import axios from 'axios'
-import { toast } from 'sonner'
-import { baseUrl } from './baseUrl'
-
-const API_URL = process.env.INTEGRATION_API_URL || baseUrl;
+import apiClient from './apiClient';
+import { toast } from 'sonner';
 
 export const findAllReports = async (): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/report/findAllReports`);
+    const response = await apiClient.get(`/report/findAllReports`);
     return response;
   } catch (error) {
     throw error;
@@ -15,7 +12,7 @@ export const findAllReports = async (): Promise<any> => {
 
 export const findReportsByWorkspaceId = async (workspaceid: number): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/report/findReportsByWorkspaceId/` + workspaceid);
+    const response = await apiClient.get(`/report/findReportsByWorkspaceId/` + workspaceid);
     return response;
   } catch (error) {
     throw error;
@@ -24,7 +21,7 @@ export const findReportsByWorkspaceId = async (workspaceid: number): Promise<any
 
 export const createReport = async (data: any): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/report/createReport`, data);
+    const response = await apiClient.post(`/report/createReport`, data);
     return response;
   } catch (error: any) {
     const status = error?.response?.status;
@@ -39,7 +36,7 @@ export const createReport = async (data: any): Promise<any> => {
 
 export const createDisplayView = async (data: any): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/report/createDisplayView`, data);
+    const response = await apiClient.post(`/report/createDisplayView`, data);
     return response;
   } catch (error: any) {
     return error;
@@ -48,7 +45,7 @@ export const createDisplayView = async (data: any): Promise<any> => {
 
 export const findAllDisplayViews = async (): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/report/findAllDisplayViews`);
+    const response = await apiClient.get(`/report/findAllDisplayViews`);
     return response;
   } catch (error) {
     throw error;
@@ -57,16 +54,16 @@ export const findAllDisplayViews = async (): Promise<any> => {
 
 export const deleteReport = async (id: number): Promise<any> => {
   try {
-    const response = await axios.delete(`${API_URL}/report/deleteReport/` + id);
+    const response = await apiClient.delete(`/report/deleteReport/` + id);
     return response;
   } catch (error) {
     throw error;
   }
 };
 
-export const findDisplayViewByReportId = async (id: number): Promise<any> => {
+export const updateReport = async (id: number, data: any): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/report/findDisplayViewByReportId/` + id);
+    const response = await apiClient.put(`/report/updateReport/` + id, data);
     return response;
   } catch (error) {
     throw error;
@@ -75,7 +72,16 @@ export const findDisplayViewByReportId = async (id: number): Promise<any> => {
 
 export const deleteDisplayView = async (id: number): Promise<any> => {
   try {
-    const response = await axios.delete(`${API_URL}/report/deleteDisplayView/` + id);
+    const response = await apiClient.delete(`/report/deleteDisplayView/` + id);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const findReportById = async (id: number): Promise<any> => {
+  try {
+    const response = await apiClient.get(`/report/findReportById/` + id);
     return response;
   } catch (error) {
     throw error;

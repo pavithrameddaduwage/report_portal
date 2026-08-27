@@ -1,11 +1,8 @@
-import axios from 'axios'
-import { baseUrl } from './baseUrl'
-
-const API_URL = process.env.INTEGRATION_API_URL || baseUrl;
+import apiClient from './apiClient';
 
 export const findAllWorkspaces = async (): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/workspace/findAllWorkspaces`);
+    const response = await apiClient.get(`/workspace/findAllWorkspaces`);
     return response;
   } catch (error) {
     throw error;
@@ -14,7 +11,7 @@ export const findAllWorkspaces = async (): Promise<any> => {
 
 export const createWorkspace = async (data: any): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/workspace/createWorkspace`, data);
+    const response = await apiClient.post(`/workspace/createWorkspace`, data);
     return response;
   } catch (error) {
     throw error;
@@ -23,7 +20,7 @@ export const createWorkspace = async (data: any): Promise<any> => {
 
 export const deleteWorkspace = async (id: number): Promise<any> => {
   try {
-    const response = await axios.delete(`${API_URL}/workspace/deleteWorkspace/` + id);
+    const response = await apiClient.delete(`/workspace/deleteWorkspace/` + id);
     return response;
   } catch (error) {
     throw error;
@@ -32,7 +29,7 @@ export const deleteWorkspace = async (id: number): Promise<any> => {
 
 export const findWorkspaceById = async (id: number): Promise<any> => {
   try {
-    const response = await axios.get(`${API_URL}/workspace/findWorkspaceById/` + id);
+    const response = await apiClient.get(`/workspace/findWorkspaceById/` + id);
     return response;
   } catch (error) {
     throw error;

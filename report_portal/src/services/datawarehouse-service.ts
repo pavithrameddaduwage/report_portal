@@ -1,7 +1,4 @@
-import axios from 'axios'
-import { baseUrl } from './baseUrl'
-
-const API_URL = process.env.INTEGRATION_API_URL || baseUrl;
+import apiClient from './apiClient';
 
 export const getReportByParameters = async (data: {
   view: string;
@@ -18,7 +15,7 @@ export const getReportByParameters = async (data: {
   display_view: number;
 }): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/datawarehouse/getReportByParameters`, data);
+    const response = await apiClient.post(`/datawarehouse/getReportByParameters`, data);
     return response;
   } catch (error) {
     throw error;
@@ -40,7 +37,7 @@ export const downloadReport = async (data: {
   display_view: number;
 }): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/datawarehouse/downloadReport`, data, {
+    const response = await apiClient.post(`/datawarehouse/downloadReport`, data, {
       responseType: 'arraybuffer',
       headers: {
         'Content-Type': 'application/json',
@@ -54,7 +51,7 @@ export const downloadReport = async (data: {
 
 export const getColumnListBySchemaAndView = async (data: { view: string; schema: string }): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/datawarehouse/getColumnListBySchemaAndView`, data, {
+    const response = await apiClient.post(`/datawarehouse/getColumnListBySchemaAndView`, data, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -65,13 +62,35 @@ export const getColumnListBySchemaAndView = async (data: { view: string; schema:
   }
 };
 
-export const getItemsforDropdown = async (data: { view: string; schema: string; column: string }): Promise<any> => {
+export const getDistinctValues = async (data: {
+  column: string;
+  schema: string;
+  view: string;
+}): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/datawarehouse/getItemsforDropdown`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await apiClient.post(`/datawarehouse/getDistinctValues`, data);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getDistinctValuesForNumeric = async (data: {
+  column: string;
+  schema: string;
+  view: string;
+}): Promise<any> => {
+  try {
+    const response = await apiClient.post(`/datawarehouse/getDistinctValuesForNumeric`, data);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getDisplayviewsByReportId = async (id: number): Promise<any> => {
+  try {
+    const response = await apiClient.get(`/datawarehouse/getDisplayviewsByReportId/` + id);
     return response;
   } catch (error) {
     throw error;
