@@ -484,74 +484,75 @@ const UserMaster = () => {
           </Table>
         </div>
 
-        {/* Pagination Controls (6 items per page) */}
-        {filteredUsers.length > PAGE_SIZE && (
+        {/* Pagination & Count Controls */}
+        {filteredUsers.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-2 border-t border-[#edf3f9]">
             <div className="text-[11px] text-[#5c7f9f]">
               Showing <span className="font-semibold text-[#0f2b48]">{startIndex + 1}</span> to{" "}
               <span className="font-semibold text-[#0f2b48]">{Math.min(startIndex + PAGE_SIZE, filteredUsers.length)}</span> of{" "}
-              <span className="font-semibold text-[#0f2b48]">{filteredUsers.length}</span> users
+              <span className="font-semibold text-[#0f2b48]">{filteredUsers.length}</span> {filteredUsers.length === 1 ? "user" : "users"}
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safeCurrentPage <= 1}
-                className="h-7 px-2 text-xs border-[#dce6f1] text-[#0f2b48] hover:bg-[#f0f6fc] disabled:opacity-40"
-              >
-                <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> Prev
-              </Button>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage <= 1}
+                  className="h-7 px-2 text-xs border-[#dce6f1] text-[#0f2b48] hover:bg-[#f0f6fc] disabled:opacity-40"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> Prev
+                </Button>
 
-              {/* Page Number Pills */}
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((page) => {
-                    // Show first page, last page, and pages around current page
-                    return (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= safeCurrentPage - 1 && page <= safeCurrentPage + 1)
-                    );
-                  })
-                  .map((page, idx, arr) => {
-                    const prev = arr[idx - 1];
-                    const showEllipsis = prev && page - prev > 1;
+                {/* Page Number Pills */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((page) => {
+                      return (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= safeCurrentPage - 1 && page <= safeCurrentPage + 1)
+                      );
+                    })
+                    .map((page, idx, arr) => {
+                      const prev = arr[idx - 1];
+                      const showEllipsis = prev && page - prev > 1;
 
-                    return (
-                      <React.Fragment key={page}>
-                        {showEllipsis && (
-                          <span className="px-1 text-[11px] text-[#8aa6bf]">...</span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setCurrentPage(page)}
-                          className={`h-7 min-w-[28px] px-2 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
-                            safeCurrentPage === page
-                              ? "bg-[#0e2947] text-white"
-                              : "bg-[#f6f9fc] text-[#335375] hover:bg-[#eaf4fd] border border-[#dce6f1]"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      </React.Fragment>
-                    );
-                  })}
+                      return (
+                        <React.Fragment key={page}>
+                          {showEllipsis && (
+                            <span className="px-1 text-[11px] text-[#8aa6bf]">...</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPage(page)}
+                            className={`h-7 min-w-[28px] px-2 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                              safeCurrentPage === page
+                                ? "bg-[#0e2947] text-white"
+                                : "bg-[#f6f9fc] text-[#335375] hover:bg-[#eaf4fd] border border-[#dce6f1]"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="h-7 px-2 text-xs border-[#dce6f1] text-[#0f2b48] hover:bg-[#f0f6fc] disabled:opacity-40"
+                >
+                  Next <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                </Button>
               </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safeCurrentPage >= totalPages}
-                className="h-7 px-2 text-xs border-[#dce6f1] text-[#0f2b48] hover:bg-[#f0f6fc] disabled:opacity-40"
-              >
-                Next <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-              </Button>
-            </div>
+            )}
           </div>
         )}
       </div>
