@@ -200,7 +200,6 @@ export default function WorkspacesPage() {
                               {rep.report_name}
                             </span>
                           </div>
-                          <ArrowRight className="w-3 h-3 text-[#8aa6bf] group-hover:text-[#2f8fe0] group-hover:translate-x-0.5 transition-transform shrink-0" />
                         </Link>
                       ))
                     )}
@@ -221,7 +220,7 @@ export default function WorkspacesPage() {
                   }
                   className="mt-2 w-full py-1.5 px-3 bg-[#f0f6fc] hover:bg-[#eaf4fd] text-[#1e5f99] hover:text-[#0a1c30] font-bold text-xs rounded-md text-center transition-colors block cursor-pointer"
                 >
-                  View Workspace →
+                  View Workspace
                 </Link>
               </div>
             );

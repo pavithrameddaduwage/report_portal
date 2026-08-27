@@ -5,7 +5,8 @@ export const findAllWorkspaces = async (): Promise<any> => {
     const response = await apiClient.get(`/workspace/findAllWorkspaces`);
     return response;
   } catch (error) {
-    throw error;
+    console.error("Error fetching workspaces:", error);
+    return { status: 200, data: [] };
   }
 };
 

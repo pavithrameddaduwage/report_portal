@@ -237,8 +237,17 @@ export function AppSidebar() {
             {permissions.user?.name ? permissions.user.name.split(' ').map((n: string) => n[0]).join('').substring(0,2).toUpperCase() : 'AU'}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-white text-[12px] font-semibold truncate leading-tight">
-              {permissions.user?.name || 'Admin User'}
+            <span 
+              className="text-white text-[12px] font-semibold truncate leading-tight"
+              title={permissions.user?.name || 'Admin User'}
+            >
+              {(() => {
+                const name = permissions.user?.name;
+                if (!name || !name.trim()) return 'Admin User';
+                const parts = name.trim().split(/\s+/);
+                if (parts.length === 1) return parts[0];
+                return `${parts[0]} ${parts[parts.length - 1][0]?.toUpperCase()}.`;
+              })()}
             </span>
             <span className="text-[#5aa8ea] text-[10px] font-medium leading-tight">
               {permissions.user?.roles?.[0] || (permissions.isAdmin ? "Administrator" : "User")}
