@@ -241,7 +241,7 @@ const UserMaster = () => {
                         onFocus={() => {
                           if (adSuggestions.length > 0) setShowSuggestions(true);
                         }}
-                        placeholder="Type letters to search AD (e.g. john@horizongroupusa.com)"
+                        placeholder="Search user..."
                         className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0] pr-8"
                       />
                       <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute right-2.5 top-2.5 pointer-events-none" />
@@ -292,7 +292,7 @@ const UserMaster = () => {
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Full Name (auto-fills on email selection)"
+                      placeholder="Full Name"
                       className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0]"
                     />
                   </FormControl>

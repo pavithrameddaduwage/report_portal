@@ -1,6 +1,7 @@
 "use client";
 
-import { Shield, Grid, FileText, Monitor, Home, Users, Key, ChevronRight, ChevronDown } from "lucide-react";
+import { Shield, Grid, FileText, Monitor, Home, Users, Key, ChevronRight, ChevronDown, Clock } from "lucide-react";
+
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -130,8 +131,10 @@ export function AppSidebar() {
                 { title: "Display View", url: "/admin/display_view", icon: Monitor },
                 { title: "Workspace", url: "/admin/workspace_master", icon: Home },
                 { title: "Users", url: "/admin/user_management", icon: Users },
+                { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock },
                 { title: "Roles & Permissions", url: "/admin/roles", icon: Key },
               ].map((item) => {
+
                 const isActive = pathname?.startsWith(item.url);
                 return (
                   <Link

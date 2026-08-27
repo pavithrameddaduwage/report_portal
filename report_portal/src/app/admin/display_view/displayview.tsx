@@ -28,9 +28,11 @@ import {
 import { getItemsforDropdown } from "@/services/datawarehouse-service";
 import {
   createDisplayView,
+  deleteDisplayView,
   findAllDisplayViews,
   findReportsByWorkspaceId,
 } from "@/services/report-service";
+
 import { findAllWorkspaces } from "@/services/workspace-services";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, X } from "lucide-react";

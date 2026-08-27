@@ -1,7 +1,7 @@
 "use client";
 
 import { AppSidebar } from "@/components/AppSideBar";
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import { usePathname } from "next/navigation";
 
 const getPageTitle = (pathname: string) => {
@@ -9,8 +9,9 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes("display_view")) return "Display view configuration";
   if (pathname.includes("workspace_master")) return "Workspace management";
   if (pathname.includes("user_management")) return "User management";
+  if (pathname.includes("report_scheduler")) return "Report Scheduler & Email Dispatcher";
   if (pathname.includes("roles")) return "Roles & permissions";
-  return "Report configuration";
+  return "Admin Panel";
 };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -20,7 +21,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen bg-[#f6f9fc] overflow-hidden">
       {/* Left Sidebar */}
-      <AppSidebar />
+      <Suspense fallback={<div className="w-64 bg-[#0b2138] h-full" />}>
+        <AppSidebar />
+      </Suspense>
 
       {/* Main Content Area */}
       <main className="flex-1 h-full overflow-y-auto px-6 py-4 flex flex-col">
@@ -36,7 +39,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* Content */}
         <div className="flex-1">
-          {children}
+          <Suspense fallback={<div className="p-8 text-center text-xs text-[#5c7f9f]">Loading...</div>}>
+            {children}
+          </Suspense>
         </div>
       </main>
     </div>

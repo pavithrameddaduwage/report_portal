@@ -6,8 +6,10 @@ import { ReportColumns } from 'src/report/entities/report-columns.entity';
 import { DisplayViewColumns } from 'src/report/entities/displayview-columns.entity';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([ReportColumns,DisplayViewColumns])],
+  imports: [TypeOrmModule.forFeature([ReportColumns, DisplayViewColumns])],
   controllers: [DatawarehouseController],
   providers: [DatawarehouseService],
+  exports: [DatawarehouseService],
 })
 export class DatawarehouseModule {}
+

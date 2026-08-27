@@ -101,6 +101,17 @@ export const findDisplayViewByReportId=async (id:number):Promise<any>=>{
     }
 }
 
+export const deleteDisplayView = async (id: number): Promise<any> => {
+    try {
+        const response = await axios.delete(`${API_URL}/report/deleteDisplayView/` + id);
+        return response;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
+
 
 
 

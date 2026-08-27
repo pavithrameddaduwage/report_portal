@@ -111,4 +111,20 @@ export class ReportService {
   findDisplayViewByReportId(reportId:number){
     return this.displayviewRepository.find({where:{report:{id:reportId}}})
   }
+
+  async deleteDisplayView(id: number) {
+    const dv = await this.displayviewRepository.findOne({
+      where: { id: id },
+      relations: ['users', 'displayview_columns'],
+    });
+
+    if (!dv) {
+      throw new NotFoundException('Display view not found');
+    }
+
+    dv.users = [];
+    await this.displayviewRepository.save(dv);
+    return this.displayviewRepository.remove(dv);
+  }
 }
+

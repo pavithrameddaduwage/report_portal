@@ -4,6 +4,17 @@ const nextConfig = {
   assetPrefix: '/report-portal/',
   basePath: '/report-portal',
   trailingSlash: true,
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/report-portal/login/',
+        basePath: false,
+        permanent: false,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
+

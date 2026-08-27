@@ -42,8 +42,15 @@ export function AdminNav() {
               </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
- 
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild className={navLinkStyle}>
+              <Link href="/admin/report_scheduler">
+                Scheduler
+              </Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
         </NavigationMenuList>
+
       </NavigationMenu>
     </nav>
   );
