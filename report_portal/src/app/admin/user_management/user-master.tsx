@@ -33,23 +33,44 @@ import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users, X } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  UserCheck,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Users,
+  X,
+  Shield,
+  Folder,
+  FileText,
+  Check,
+  CheckSquare,
+  Square,
+  Sparkles,
+  Layers,
+} from "lucide-react";
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(2, "Full name is required"),
   role: z.string().default("User"),
-  workspaceId: z.number().optional(),
 });
 
 const UserMaster = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [rawWorkspaces, setRawWorkspaces] = useState<any[]>([]);
   const [rolesList, setRolesList] = useState<any[]>([
     { id: 1, role: "Admin" },
     { id: 2, role: "User" },
   ]);
+
+  // Selected Permissions: Workspaces & Specific Reports
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<number[]>([]);
+  const [selectedReportIds, setSelectedReportIds] = useState<number[]>([]);
+  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Record<number, boolean>>({});
 
   // Existing Users Pagination & Search state
   const [tableSearch, setTableSearch] = useState<string>("");
@@ -69,9 +90,11 @@ const UserMaster = () => {
       email: "",
       name: "",
       role: "User",
-      workspaceId: undefined,
     },
   });
+
+  const selectedRole = form.watch("role");
+  const isAdminRole = selectedRole?.toLowerCase() === "admin";
 
   useEffect(() => {
     fetchUsers();
@@ -105,7 +128,13 @@ const UserMaster = () => {
     try {
       const res = await findAllWorkspaces();
       if (res.status === 200) {
-        setWorkspaces(res.data.map((ws: any) => ({ value: ws.id, label: ws.name })));
+        const wsData = res.data || [];
+        setRawWorkspaces(wsData);
+        const initialExpanded: Record<number, boolean> = {};
+        wsData.forEach((w: any) => {
+          initialExpanded[w.id] = true;
+        });
+        setExpandedWorkspaces(initialExpanded);
       }
     } catch (error) {
       console.error(error);
@@ -160,20 +189,75 @@ const UserMaster = () => {
     toast.success(`Loaded credentials for ${adUser.name}`);
   };
 
+  // Toggle Workspace Selection (and all reports inside it)
+  const toggleWorkspace = (wsId: number) => {
+    const ws = rawWorkspaces.find((w) => w.id === wsId);
+    const rptIds = (ws?.reports || []).map((r: any) => r.id);
+
+    if (selectedWorkspaceIds.includes(wsId)) {
+      // Uncheck workspace and its reports
+      setSelectedWorkspaceIds((prev) => prev.filter((id) => id !== wsId));
+      setSelectedReportIds((prev) => prev.filter((id) => !rptIds.includes(id)));
+    } else {
+      // Check workspace and its reports
+      setSelectedWorkspaceIds((prev) => [...prev, wsId]);
+      setSelectedReportIds((prev) => Array.from(new Set([...prev, ...rptIds])));
+    }
+  };
+
+  // Toggle Specific Report Selection
+  const toggleReport = (rptId: number, wsId: number) => {
+    setSelectedReportIds((prev) => {
+      const isSelected = prev.includes(rptId);
+      const nextReports = isSelected ? prev.filter((id) => id !== rptId) : [...prev, rptId];
+
+      // Check if all reports in this workspace are now selected
+      const ws = rawWorkspaces.find((w) => w.id === wsId);
+      const wsReportIds = (ws?.reports || []).map((r: any) => r.id);
+      const allSelected = wsReportIds.length > 0 && wsReportIds.every((id: number) => nextReports.includes(id));
+
+      if (allSelected) {
+        setSelectedWorkspaceIds((wPrev) => Array.from(new Set([...wPrev, wsId])));
+      } else {
+        setSelectedWorkspaceIds((wPrev) => wPrev.filter((id) => id !== wsId));
+      }
+
+      return nextReports;
+    });
+  };
+
+  const handleSelectAllAccess = () => {
+    const allWsIds = rawWorkspaces.map((w) => w.id);
+    const allRptIds = rawWorkspaces.flatMap((w) => (w.reports || []).map((r: any) => r.id));
+    setSelectedWorkspaceIds(allWsIds);
+    setSelectedReportIds(allRptIds);
+  };
+
+  const handleClearAllAccess = () => {
+    setSelectedWorkspaceIds([]);
+    setSelectedReportIds([]);
+  };
+
+  const toggleAccordion = (wsId: number) => {
+    setExpandedWorkspaces((prev) => ({ ...prev, [wsId]: !prev[wsId] }));
+  };
+
   const onSubmit = async (data: any) => {
     try {
+      const isAdm = data.role?.toLowerCase() === "admin";
       const payload: any = {
         id: selectedUser?.id || undefined,
-        name: data.name,
-        email: data.email,
+        name: data.name.trim(),
+        email: data.email.trim(),
         role: data.role,
-        is_admin: data.role === "Admin",
-        workspaceIds: data.workspaceId ? [data.workspaceId] : [],
+        is_admin: isAdm,
+        workspaceIds: isAdm ? [] : selectedWorkspaceIds,
+        reportIds: isAdm ? [] : selectedReportIds,
       };
 
       const res: any = await createUser(payload);
       if (res.status === 200 || res.status === 201) {
-        toast.success(selectedUser ? "User updated" : "User added successfully");
+        toast.success(selectedUser ? "User updated successfully" : "User added successfully");
         fetchUsers();
         handleCancel();
       } else {
@@ -190,8 +274,13 @@ const UserMaster = () => {
       email: u.email || "",
       name: u.name || "",
       role: u.role || (u.is_admin ? "Admin" : "User"),
-      workspaceId: u.workspaces && u.workspaces.length > 0 ? u.workspaces[0].id : undefined,
     });
+
+    const userWsIds = (u.workspaces || []).map((w: any) => w.id);
+    const userRptIds = (u.reports || []).map((r: any) => r.id);
+
+    setSelectedWorkspaceIds(userWsIds);
+    setSelectedReportIds(userRptIds);
   };
 
   const handleCancel = () => {
@@ -200,8 +289,9 @@ const UserMaster = () => {
       email: "",
       name: "",
       role: "User",
-      workspaceId: undefined,
     });
+    setSelectedWorkspaceIds([]);
+    setSelectedReportIds([]);
     setAdSuggestions([]);
     setShowSuggestions(false);
   };
@@ -235,11 +325,25 @@ const UserMaster = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full items-start">
-      {/* Left Column: Form Card (Reduced width) */}
-      <div className="lg:col-span-5 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+      {/* Left Column: Form Card with Granular Workspace & Report Permissions */}
+      <div className="lg:col-span-6 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#edf3f9]">
+          <div className="w-8 h-8 rounded-lg bg-[#eaf4fd] text-[#2f8fe0] flex items-center justify-center">
+            <Users className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-[13px] font-bold text-[#0a1c30]">
+              {selectedUser ? `Edit User: ${selectedUser.name}` : "Add New User"}
+            </h2>
+            <p className="text-[11px] text-[#5c7f9f]">
+              Configure user details, assign system role, and set granular report access
+            </p>
+          </div>
+        </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* 1. EMAIL ADDRESS (Top Field with AD Autocomplete) */}
+            {/* 1. EMAIL ADDRESS (With AD Autocomplete) */}
             <FormField
               control={form.control}
               name="email"
@@ -258,51 +362,42 @@ const UserMaster = () => {
                       <Input
                         {...field}
                         onChange={(e) => handleEmailChange(e.target.value, field.onChange)}
-                        onFocus={() => {
-                          if (adSuggestions.length > 0) setShowSuggestions(true);
-                        }}
-                        placeholder="Search user..."
-                        className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0] pr-8"
+                        placeholder="Search Active Directory name or email..."
+                        className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs pr-8 focus-visible:ring-1 focus-visible:ring-[#2f8fe0]"
                       />
-                      <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute right-2.5 top-2.5 pointer-events-none" />
+                      {field.value && (
+                        <UserCheck className="w-4 h-4 text-[#2f8fe0] absolute right-2.5 top-2 pointer-events-none" />
+                      )}
                     </div>
                   </FormControl>
+                  <FormMessage className="text-xs text-red-600" />
 
-                  {/* AD Autocomplete Suggestions Dropdown */}
+                  {/* AD Search Suggestions Dropdown */}
                   {showSuggestions && adSuggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#dce6f1] rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto divide-y divide-[#edf3f9]">
-                      <div className="px-3 py-1.5 bg-[#f6f9fc] text-[10px] font-bold text-[#5c7f9f] uppercase tracking-wider">
-                        Active Directory Matches ({adSuggestions.length})
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-[#dce6f1] rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                      <div className="p-1.5 text-[10px] font-bold uppercase tracking-wider text-[#5c7f9f] bg-[#f6f9fc] border-b border-[#edf3f9]">
+                        Select Domain User
                       </div>
                       {adSuggestions.map((adUser: any, idx: number) => (
                         <div
                           key={idx}
                           onClick={() => handleSelectADUser(adUser)}
-                          className="px-3 py-2 hover:bg-[#eaf4fd] cursor-pointer flex items-center justify-between transition-colors group"
+                          className="p-2 hover:bg-[#eaf4fd] cursor-pointer transition-colors border-b border-[#edf3f9] last:border-0 flex flex-col"
                         >
-                          <div>
-                            <div className="font-semibold text-xs text-[#0f2b48] group-hover:text-[#2f8fe0] flex items-center gap-1.5">
-                              <UserCheck className="w-3.5 h-3.5 text-[#2f8fe0]" />
-                              <span>{adUser.name}</span>
-                            </div>
-                            <div className="text-[11px] text-[#5c7f9f]">{adUser.email}</div>
-                          </div>
+                          <div className="font-semibold text-xs text-[#0a1c30]">{adUser.name}</div>
+                          <div className="text-[11px] text-[#5c7f9f]">{adUser.email}</div>
                           {adUser.department && (
-                            <span className="text-[10px] bg-[#f0f6fc] text-[#1e5f99] font-medium px-2 py-0.5 rounded">
-                              {adUser.department}
-                            </span>
+                            <div className="text-[10px] text-[#2f8fe0]">{adUser.department}</div>
                           )}
                         </div>
                       ))}
                     </div>
                   )}
-
-                  <FormMessage className="text-xs text-red-600" />
                 </FormItem>
               )}
             />
 
-            {/* 2. FULL NAME (Auto-filled from AD) */}
+            {/* 2. USER FULL NAME */}
             <FormField
               control={form.control}
               name="name"
@@ -312,7 +407,7 @@ const UserMaster = () => {
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Full Name"
+                      placeholder="e.g. John Doe"
                       className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0]"
                     />
                   </FormControl>
@@ -321,17 +416,14 @@ const UserMaster = () => {
               )}
             />
 
-            {/* 3. DYNAMIC ROLE DROPDOWN FROM ROLES MASTER */}
+            {/* 3. DYNAMIC ROLE DROPDOWN */}
             <FormField
               control={form.control}
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[12px] font-bold text-[#0d2745]">Role</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
+                  <FormLabel className="text-[12px] font-bold text-[#0d2745]">System Role</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] rounded-md shadow-2xs">
                         <SelectValue placeholder="Select role" />
@@ -350,37 +442,153 @@ const UserMaster = () => {
               )}
             />
 
-            {/* 4. WORKSPACE ACCESS */}
-            <FormField
-              control={form.control}
-              name="workspaceId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[12px] font-bold text-[#0d2745]">Workspace access</FormLabel>
-                  <Select
-                    value={field.value ? String(field.value) : ""}
-                    onValueChange={(val) => field.onChange(Number(val))}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] rounded-md shadow-2xs">
-                        <SelectValue placeholder="Select workspace" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="text-xs border-[#dce6f1]">
-                      {workspaces.map((ws: any) => (
-                        <SelectItem key={ws.value} value={String(ws.value)}>
-                          {ws.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs text-red-600" />
-                </FormItem>
+            {/* 4. GRANULAR WORKSPACES & SPECIFIC REPORTS ASSIGNMENT */}
+            <div className="pt-2 border-t border-[#edf3f9]">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[#2f8fe0]" />
+                  <span className="text-[12px] font-bold text-[#0d2745]">
+                    Assigned Workspaces & Reports
+                  </span>
+                </div>
+                {!isAdminRole && rawWorkspaces.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllAccess}
+                      className="text-[11px] text-[#2f8fe0] hover:underline font-medium cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-[#dce6f1]">|</span>
+                    <button
+                      type="button"
+                      onClick={handleClearAllAccess}
+                      className="text-[11px] text-[#5c7f9f] hover:text-red-500 hover:underline font-medium cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {isAdminRole ? (
+                <div className="p-3.5 rounded-lg bg-[#eaf4fd] border border-[#c8dced] flex items-start gap-2.5">
+                  <Shield className="w-4 h-4 text-[#1e5f99] shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-[#1e5f99] leading-relaxed">
+                    <strong>Administrator Role:</strong> Users with the Admin role automatically have full unrestricted access to all workspaces, reports, and administrative management features.
+                  </p>
+                </div>
+              ) : rawWorkspaces.length === 0 ? (
+                <div className="p-4 text-center text-xs text-[#5c7f9f] bg-[#f6f9fc] rounded-lg border border-[#dce6f1]">
+                  No workspaces configured yet. Create a workspace in the Admin panel first.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                  {rawWorkspaces.map((ws: any) => {
+                    const wsSelected = selectedWorkspaceIds.includes(ws.id);
+                    const reports = ws.reports || [];
+                    const selectedInWs = reports.filter((r: any) => selectedReportIds.includes(r.id)).length;
+                    const isExpanded = expandedWorkspaces[ws.id] !== false;
+
+                    return (
+                      <div
+                        key={ws.id}
+                        className={`rounded-lg border transition-all ${
+                          wsSelected
+                            ? "bg-[#eaf4fd]/40 border-[#a8d3f7]"
+                            : selectedInWs > 0
+                            ? "bg-[#fbfdff] border-[#b8d9f5]"
+                            : "bg-[#fbfdff] border-[#e2edf6]"
+                        }`}
+                      >
+                        {/* Workspace Level Header Checkbox */}
+                        <div className="p-2.5 flex items-center justify-between gap-2 border-b border-[#edf3f9]/60">
+                          <div
+                            onClick={() => toggleWorkspace(ws.id)}
+                            className="flex items-center gap-2 cursor-pointer select-none flex-1 min-w-0"
+                          >
+                            <div
+                              className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors ${
+                                wsSelected
+                                  ? "bg-[#2f8fe0] text-white"
+                                  : "border border-[#b8d2e8] bg-white"
+                              }`}
+                            >
+                              {wsSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <Folder className="w-3.5 h-3.5 text-[#2f8fe0] shrink-0" />
+                            <span className="text-xs font-semibold text-[#0a1c30] truncate">
+                              {ws.name}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0f6fc] text-[#1e5f99] border border-[#dce6f1]">
+                              {selectedInWs} of {reports.length} reports
+                            </span>
+                            {reports.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleAccordion(ws.id)}
+                                className="text-[#8aa6bf] hover:text-[#0a1c30] p-1 rounded transition-colors"
+                              >
+                                <ChevronDown
+                                  className={`w-3.5 h-3.5 transition-transform ${
+                                    isExpanded ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Individual Specific Reports Checklist */}
+                        {isExpanded && reports.length > 0 && (
+                          <div className="p-2.5 pt-1.5 bg-white/70 rounded-b-lg space-y-1 pl-6">
+                            <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider block mb-1">
+                              Specific Reports:
+                            </span>
+                            {reports.map((rpt: any) => {
+                              const rptSelected = selectedReportIds.includes(rpt.id);
+
+                              return (
+                                <div
+                                  key={rpt.id}
+                                  onClick={() => toggleReport(rpt.id, ws.id)}
+                                  className={`flex items-center gap-2 py-1 px-2 rounded-md cursor-pointer transition-colors select-none ${
+                                    rptSelected
+                                      ? "bg-[#eaf4fd] text-[#0f2b48]"
+                                      : "hover:bg-[#f6f9fc] text-[#335375]"
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 transition-colors ${
+                                      rptSelected
+                                        ? "bg-[#2f8fe0] text-white"
+                                        : "border border-[#b8d2e8] bg-white"
+                                    }`}
+                                  >
+                                    {rptSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                  </div>
+                                  <FileText className="w-3 h-3 text-[#2f8fe0] shrink-0" />
+                                  <span className="text-[11.5px] font-medium truncate">
+                                    {rpt.report_name}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            />
+            </div>
 
             {/* Form Actions */}
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3f9]">
               <Button
                 type="button"
                 variant="outline"
@@ -401,7 +609,7 @@ const UserMaster = () => {
       </div>
 
       {/* Right Column: Existing Users (Expanded width + 6-item pagination) */}
-      <div className="lg:col-span-7 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+      <div className="lg:col-span-6 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
         {/* Card Header with Search & Count */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#edf3f9]">
           <div className="flex items-center gap-2">
@@ -444,9 +652,15 @@ const UserMaster = () => {
           <Table className="text-xs min-w-[380px]">
             <TableHeader className="bg-[#edf4fa]">
               <TableRow className="border-[#dce6f1]">
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">NAME & EMAIL</TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ROLE</TableHead>
-                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ACTION</TableHead>
+                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
+                  NAME & EMAIL
+                </TableHead>
+                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
+                  ROLE & ACCESS
+                </TableHead>
+                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
+                  ACTION
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -473,41 +687,60 @@ const UserMaster = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedUsers.map((u: any) => (
-                  <TableRow key={u.id} className="border-[#dce6f1] hover:bg-[#f6fafc] transition-colors">
-                    <TableCell className="py-2.5">
-                      <div className="font-semibold text-[#0f2b48]">{u.name}</div>
-                      <div className="text-[11px] text-[#5c7f9f] truncate">{u.email}</div>
-                    </TableCell>
-                    <TableCell className="text-xs py-2.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        u.role === "Admin" || u.is_admin
-                          ? "bg-[#eaf4fd] text-[#1e5f99] border border-[#c8dced]"
-                          : "bg-[#f0f6fc] text-[#335375] border border-[#dce6f1]"
-                      }`}>
-                        {u.role || (u.is_admin ? "Admin" : "User")}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center py-2.5 whitespace-nowrap">
-                      <div className="flex gap-2 justify-center">
-                        <button
-                          type="button"
-                          onClick={() => handleEditUser(u)}
-                          className="border border-[#dce6f1] rounded px-2.5 py-1 text-[11px] text-[#0e2947] hover:bg-[#f0f6fc] font-medium transition-colors cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteUser(u.id)}
-                          className="border border-red-200 text-red-500 hover:bg-red-50 rounded px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                paginatedUsers.map((u: any) => {
+                  const isAdm = u.role?.toLowerCase() === "admin" || u.is_admin;
+                  const wsCount = (u.workspaces || []).length;
+                  const rptCount = (u.reports || []).length;
+
+                  return (
+                    <TableRow key={u.id} className="border-[#dce6f1] hover:bg-[#f6fafc] transition-colors">
+                      <TableCell className="py-2.5">
+                        <div className="font-semibold text-[#0f2b48]">{u.name}</div>
+                        <div className="text-[11px] text-[#5c7f9f] truncate">{u.email}</div>
+                      </TableCell>
+                      <TableCell className="text-xs py-2.5 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold w-fit ${
+                              isAdm
+                                ? "bg-[#eaf4fd] text-[#1e5f99] border border-[#c8dced]"
+                                : "bg-[#f0f6fc] text-[#335375] border border-[#dce6f1]"
+                            }`}
+                          >
+                            {u.role || (isAdm ? "Admin" : "User")}
+                          </span>
+                          <span className="text-[10.5px] text-[#5c7f9f]">
+                            {isAdm
+                              ? "All Reports (Superadmin)"
+                              : wsCount > 0
+                              ? `${wsCount} ws, ${rptCount} reports`
+                              : rptCount > 0
+                              ? `${rptCount} specific reports`
+                              : "No access assigned"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center py-2.5 whitespace-nowrap">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            type="button"
+                            onClick={() => handleEditUser(u)}
+                            className="border border-[#dce6f1] rounded px-2.5 py-1 text-[11px] text-[#0e2947] hover:bg-[#f0f6fc] font-medium transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u.id)}
+                            className="border border-red-200 text-red-500 hover:bg-red-50 rounded px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -518,8 +751,11 @@ const UserMaster = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-2 border-t border-[#edf3f9]">
             <div className="text-[11px] text-[#5c7f9f]">
               Showing <span className="font-semibold text-[#0f2b48]">{startIndex + 1}</span> to{" "}
-              <span className="font-semibold text-[#0f2b48]">{Math.min(startIndex + PAGE_SIZE, filteredUsers.length)}</span> of{" "}
-              <span className="font-semibold text-[#0f2b48]">{filteredUsers.length}</span> {filteredUsers.length === 1 ? "user" : "users"}
+              <span className="font-semibold text-[#0f2b48]">
+                {Math.min(startIndex + PAGE_SIZE, filteredUsers.length)}
+              </span>{" "}
+              of <span className="font-semibold text-[#0f2b48]">{filteredUsers.length}</span>{" "}
+              {filteredUsers.length === 1 ? "user" : "users"}
             </div>
 
             {totalPages > 1 && (
@@ -590,4 +826,3 @@ const UserMaster = () => {
 };
 
 export default UserMaster;
-

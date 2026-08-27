@@ -103,40 +103,49 @@ export class UsersService implements OnModuleInit {
 
     (user.reportIds || []).forEach((f: any) => {
       if (f) {
-        reports.push({ id: f } as Report);
+        reports.push({ id: Number(f) } as Report);
       }
     });
 
     (user.workspaceIds || []).forEach((f: any) => {
       if (f) {
-        workspaces.push({ id: f } as Workspace);
+        workspaces.push({ id: Number(f) } as Workspace);
       }
     });
 
     (user.displayviewIds || []).forEach((f: any) => {
       if (f) {
-        displayviews.push({ id: f } as DisplayView);
+        displayviews.push({ id: Number(f) } as DisplayView);
       }
     });
 
-    let newuser = new User();
-    newuser.name = user.name;
-    newuser.email = user.email;
-    newuser.reports = reports;
-    newuser.workspaces = workspaces;
-    newuser.displayviews = displayviews;
-    newuser.id = user.id;
-    newuser.is_admin = user.is_admin === true || user.role === 'Admin';
-    newuser.role = user.role || (newuser.is_admin ? 'Admin' : 'User');
-
-    if (!user.id || user.id == null || user.id == 0) {
-      delete newuser.id;
+    let userEntity: User;
+    if (user.id && Number(user.id) > 0) {
+      userEntity =
+        (await this.userRepository.findOne({
+          where: { id: Number(user.id) },
+          relations: ['workspaces', 'reports', 'displayviews'],
+        })) || new User();
+    } else {
+      userEntity =
+        (await this.userRepository.findOne({
+          where: { email: ILike(user.email) },
+          relations: ['workspaces', 'reports', 'displayviews'],
+        })) || new User();
     }
 
-    const output = await this.userRepository.save(newuser);
+    userEntity.name = user.name;
+    userEntity.email = user.email;
+    userEntity.reports = reports;
+    userEntity.workspaces = workspaces;
+    userEntity.displayviews = displayviews;
+    userEntity.is_admin = user.is_admin === true || user.role === 'Admin';
+    userEntity.role = user.role || (userEntity.is_admin ? 'Admin' : 'User');
+
+    const output = await this.userRepository.save(userEntity);
 
     let roles = [];
-    if (newuser.is_admin) {
+    if (userEntity.is_admin) {
       roles = [15, 16];
     } else {
       roles = [16];
