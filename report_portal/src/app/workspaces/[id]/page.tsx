@@ -31,63 +31,85 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
   const fetchworkspace = async (email: string) => {
     try {
-      const userresponse = await findUserByEmail({ email });
-      if (userresponse.status === 200 || userresponse.status === 201) {
-        const user = userresponse.data;
-        setUser(user);
+      const token = localStorage.getItem("access_token");
+      const decoded: any = token ? jwtDecode(token) : null;
+      const rawRole = String(decoded?.role || "").toLowerCase();
+      const isAdminToken =
+        decoded?.is_admin === true ||
+        decoded?.isAdmin === true ||
+        rawRole === "admin" ||
+        rawRole === "administrator";
 
-        let workspaceids = user && user.workspaces ? user.workspaces.map((ws: any) => ws.id) : [];
-        let reportids = user && user.reports ? user.reports.map((rpt: any) => rpt.id) : [];
+      const [userRes, wsRes] = await Promise.allSettled([
+        email ? findUserByEmail({ email }) : Promise.resolve(null),
+        findWorkspaceById(parseInt(id)),
+      ]);
 
-        const res: any = await findWorkspaceById(parseInt(id));
-        if (res.status === 200) {
-          const data = res.data;
+      let userDb: any = null;
+      if (userRes.status === "fulfilled" && userRes.value?.status === 200) {
+        userDb = userRes.value.data;
+        setUser(userDb);
+      }
 
-          if (workspaceids.includes(data.id)) {
-            data.reports.map((rpt: any) => {
-              rpt["authorized"] = true;
-              return rpt;
-            });
-          } else {
-            data.reports.map((rpt: any) => {
-              rpt["authorized"] = reportids.includes(rpt.id);
-              return rpt;
-            });
-          }
+      const isAdmin =
+        isAdminToken ||
+        userDb?.is_admin === true ||
+        String(userDb?.role || "").toLowerCase() === "admin";
 
-          let report = null;
-          if (reportId) {
-            report = data.reports.find((f: any) => f.id == reportId);
-          } else if (data.reports.length > 0) {
-            report = data.reports.find((f: any) => f.authorized);
-          }
+      if (wsRes.status === "fulfilled" && wsRes.value?.status === 200) {
+        const data = wsRes.value.data;
+        const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => ws.id) : [];
+        const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => rpt.id) : [];
 
-          if (report) {
-            handleReportSelect(report, user);
-            setSelectedReport(report);
-          }
-          setWorkspace(data);
+        data.reports = (data.reports || []).map((rpt: any) => {
+          rpt["authorized"] = isAdmin || workspaceids.includes(data.id) || reportids.includes(rpt.id);
+          return rpt;
+        });
+
+        let report = null;
+        if (reportId) {
+          report = data.reports.find((f: any) => f.id == reportId);
+        } else if (data.reports.length > 0) {
+          report = data.reports.find((f: any) => f.authorized) || data.reports[0];
         }
+
+        if (report) {
+          handleReportSelect(report, userDb, isAdmin);
+          setSelectedReport(report);
+        }
+        setWorkspace(data);
       }
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleReportSelect = async (report: any, selecteduser?: any) => {
+  const handleReportSelect = async (report: any, selecteduser?: any, isAdminOverride?: boolean) => {
     const response = await findDisplayViewByReportId(report.id);
     if (response.status === 200) {
-      setDisplayViews(response.data);
-      const dvids = response.data.map((f: any) => f.id);
-      let alloweddv: any = [];
+      const allDvs = response.data || [];
+      setDisplayViews(allDvs);
+      const dvids = allDvs.map((f: any) => f.id);
 
-      let tempuser = user || selecteduser;
-      if (tempuser && tempuser.displayviews) {
-        tempuser.displayviews.forEach((f: any) => {
-          if (dvids.includes(f.id)) {
-            alloweddv.push({ value: f.id, label: f.displayview_name });
-          }
-        });
+      const token = localStorage.getItem("access_token");
+      const decoded: any = token ? jwtDecode(token) : null;
+      const isAdmin =
+        isAdminOverride ??
+        (decoded?.is_admin === true ||
+          String(decoded?.role || "").toLowerCase() === "admin");
+
+      let alloweddv: any = [];
+      if (isAdmin) {
+        alloweddv = allDvs.map((f: any) => ({ value: f.id, label: f.displayview_name }));
+      } else {
+        let tempuser = user || selecteduser;
+        if (tempuser && tempuser.displayviews) {
+          tempuser.displayviews.forEach((f: any) => {
+            if (dvids.includes(f.id)) {
+              alloweddv.push({ value: f.id, label: f.displayview_name });
+            }
+          });
+        }
       }
       setAllowedDisplayView({ dv_count: dvids.length, displayViews: alloweddv });
     }

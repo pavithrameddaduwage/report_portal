@@ -6,50 +6,81 @@ import { findAllWorkspaces } from "@/services/workspace-services";
 import { findUserByEmail } from "@/services/user-service";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
-import { Search, Home, FileText, ArrowRight, Folder } from "lucide-react";
+import { Search, Home, FileText, ArrowRight, Folder, Loader2 } from "lucide-react";
 
 export default function WorkspacesPage() {
   const router = useRouter(); 
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [displayworkspaces, setDisplayWorkspaces] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (token) {
       const user: any = jwtDecode(token);
-      getAllWorkspaces(user.email);
+      getAllWorkspaces(user);
     } else {
       router.push("/login");
     }
   }, []);
 
-  const getAllWorkspaces = async (email: string) => {
+  const getAllWorkspaces = async (decodedUser: any) => {
     try {
-      const userresponse = await findUserByEmail({ email });
-      if (userresponse.status === 200 || userresponse.status === 201) {
-        const user = userresponse.data;
-        const workspaceids = user && user.workspaces ? user.workspaces.map((ws: any) => ws.id) : [];
-        const reportids = user && user.reports ? user.reports.map((rpt: any) => rpt.id) : [];
+      setLoading(true);
+      const email = decodedUser?.email || "";
+      const rawRole = String(decodedUser?.role || "").toLowerCase();
+      const isAdminToken =
+        decodedUser?.is_admin === true ||
+        decodedUser?.isAdmin === true ||
+        rawRole === "admin" ||
+        rawRole === "administrator" ||
+        (Array.isArray(decodedUser?.roles) &&
+          decodedUser.roles.some((r: any) => String(r).toLowerCase() === "admin"));
 
-        const response = await findAllWorkspaces();
-        if (response.status === 200) {
-          const rawWorkspaces = response.data || [];
-          const finalworkspaces = rawWorkspaces.map((ws: any) => {
-            const isWsAuth = workspaceids.includes(ws.id);
-            const reports = (ws.reports || []).map((rpt: any) => ({
-              ...rpt,
-              authorized: isWsAuth || reportids.includes(rpt.id),
-            }));
-            return { ...ws, reports };
-          });
+      // Fetch user details and workspaces in parallel for fast loading
+      const [userRes, wsRes] = await Promise.allSettled([
+        email ? findUserByEmail({ email }) : Promise.resolve(null),
+        findAllWorkspaces(),
+      ]);
 
-          setWorkspaces(finalworkspaces);
-          setDisplayWorkspaces(finalworkspaces);
-        }
+      let userDb: any = null;
+      if (userRes.status === "fulfilled" && userRes.value?.status === 200) {
+        userDb = userRes.value.data;
       }
+
+      const isAdmin =
+        isAdminToken ||
+        userDb?.is_admin === true ||
+        String(userDb?.role || "").toLowerCase() === "admin";
+
+      let rawWorkspaces: any[] = [];
+      if (wsRes.status === "fulfilled" && wsRes.value?.status === 200) {
+        rawWorkspaces = wsRes.value.data || [];
+      }
+
+      const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => ws.id) : [];
+      const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => rpt.id) : [];
+
+      const finalworkspaces = rawWorkspaces.map((ws: any) => {
+        const isWsAuth = isAdmin || workspaceids.includes(ws.id);
+        const reports = (ws.reports || []).map((rpt: any) => ({
+          ...rpt,
+          authorized: isAdmin || isWsAuth || reportids.includes(rpt.id),
+        }));
+        return {
+          ...ws,
+          authorized: isWsAuth || reports.some((r: any) => r.authorized),
+          reports,
+        };
+      });
+
+      setWorkspaces(finalworkspaces);
+      setDisplayWorkspaces(finalworkspaces);
     } catch (e) {
-      console.error(e);
+      console.error("Error loading workspaces:", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,7 +94,7 @@ export default function WorkspacesPage() {
 
     let filtered: any[] = [];
     workspaces.forEach((ws: any) => {
-      let filterWS: any = { id: ws.id, name: ws.name, description: ws.description };
+      let filterWS: any = { ...ws };
       let matchingReports: any = [];
       (ws.reports || []).forEach((rpt: any) => {
         if (rpt.report_name?.toString().toLowerCase().includes(val.toLowerCase())) {
@@ -96,25 +127,26 @@ export default function WorkspacesPage() {
         
         {/* Search Input and Button */}
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Search reports or workspaces..."
-            value={searchQuery}
-            onChange={handleReportSearch}
-            className="border border-[#dce6f1] rounded-md text-xs h-8 px-3 w-64 bg-white text-[#0f2b48] placeholder:text-[#8aa6bf] focus:outline-none focus:border-[#2f8fe0] shadow-2xs"
-          />
-          <button 
-            type="button"
-            className="bg-[#0e2947] hover:bg-[#163e6b] text-white text-xs px-4 h-8 rounded-md font-semibold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span>Search</span>
-          </button>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search reports or workspaces..."
+              value={searchQuery}
+              onChange={handleReportSearch}
+              className="border border-[#dce6f1] rounded-md text-xs h-8 pl-8 pr-3 w-64 bg-white text-[#0f2b48] placeholder:text-[#8aa6bf] focus:outline-none focus:border-[#2f8fe0] shadow-2xs"
+            />
+            <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5 pointer-events-none" />
+          </div>
         </div>
       </div>
 
-      {/* Workspaces 5-Column Grid */}
-      {displayworkspaces.length === 0 ? (
+      {/* Loading Skeleton */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-16 bg-white rounded-xl border border-[#dce6f1]">
+          <Loader2 className="w-6 h-6 animate-spin text-[#2f8fe0] mb-2" />
+          <span className="text-xs text-[#5c7f9f]">Loading workspaces...</span>
+        </div>
+      ) : displayworkspaces.length === 0 ? (
         <div className="bg-white rounded-xl border border-[#dce6f1] p-12 text-center text-xs text-[#5c7f9f] shadow-2xs">
           No workspaces or authorized reports found.
         </div>
@@ -122,7 +154,6 @@ export default function WorkspacesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full">
           {displayworkspaces.map((workspace: any) => {
             const authReports = (workspace.reports || []).filter((r: any) => r.authorized !== false);
-            if (authReports.length === 0) return null;
 
             return (
               <div 
@@ -152,21 +183,27 @@ export default function WorkspacesPage() {
 
                   {/* Reports List inside Card */}
                   <div className="flex flex-col gap-1.5 my-3 pt-2 border-t border-[#f0f6fc]">
-                    {authReports.slice(0, 3).map((rep: any) => (
-                      <Link
-                        key={rep.id}
-                        href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
-                        className="flex items-center justify-between p-1.5 rounded-md hover:bg-[#f0f6fc] transition-colors group text-[11px]"
-                      >
-                        <div className="flex items-center gap-1.5 truncate">
-                          <FileText className="w-3 h-3 text-[#2f8fe0] shrink-0" />
-                          <span className="text-[#0f2b48] font-medium truncate group-hover:text-[#2f8fe0]">
-                            {rep.report_name}
-                          </span>
-                        </div>
-                        <ArrowRight className="w-3 h-3 text-[#8aa6bf] group-hover:text-[#2f8fe0] group-hover:translate-x-0.5 transition-transform shrink-0" />
-                      </Link>
-                    ))}
+                    {authReports.length === 0 ? (
+                      <span className="text-[11px] text-[#8aa6bf] italic p-1">
+                        No reports assigned yet
+                      </span>
+                    ) : (
+                      authReports.slice(0, 3).map((rep: any) => (
+                        <Link
+                          key={rep.id}
+                          href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
+                          className="flex items-center justify-between p-1.5 rounded-md hover:bg-[#f0f6fc] transition-colors group text-[11px]"
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <FileText className="w-3 h-3 text-[#2f8fe0] shrink-0" />
+                            <span className="text-[#0f2b48] font-medium truncate group-hover:text-[#2f8fe0]">
+                              {rep.report_name}
+                            </span>
+                          </div>
+                          <ArrowRight className="w-3 h-3 text-[#8aa6bf] group-hover:text-[#2f8fe0] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                        </Link>
+                      ))
+                    )}
                     {authReports.length > 3 && (
                       <span className="text-[10px] text-[#8aa6bf] font-medium pl-1">
                         + {authReports.length - 3} more reports
@@ -177,8 +214,12 @@ export default function WorkspacesPage() {
 
                 {/* Card Action Link */}
                 <Link
-                  href={`/workspaces/${workspace.id}?reportId=${authReports[0]?.id}`}
-                  className="mt-2 w-full py-1.5 px-3 bg-[#f0f6fc] hover:bg-[#eaf4fd] text-[#1e5f99] hover:text-[#0a1c30] font-bold text-xs rounded-md text-center transition-colors block"
+                  href={
+                    authReports.length > 0
+                      ? `/workspaces/${workspace.id}?reportId=${authReports[0]?.id}`
+                      : `/workspaces/${workspace.id}`
+                  }
+                  className="mt-2 w-full py-1.5 px-3 bg-[#f0f6fc] hover:bg-[#eaf4fd] text-[#1e5f99] hover:text-[#0a1c30] font-bold text-xs rounded-md text-center transition-colors block cursor-pointer"
                 >
                   View Workspace →
                 </Link>

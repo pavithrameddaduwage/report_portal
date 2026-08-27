@@ -39,11 +39,12 @@ export function AppSidebar() {
   useEffect(() => {
     const perms = getUserPermissions();
     setPermissions(perms);
-    if (perms.user?.email) {
-      loadWorkspaces(perms.user.email);
-    } else {
-      loadWorkspaces("");
-    }
+    loadWorkspaces(perms.user?.email || "");
+  }, []);
+
+  useEffect(() => {
+    const perms = getUserPermissions();
+    setPermissions(perms);
   }, [pathname]);
 
   const loadWorkspaces = async (email: string) => {
