@@ -12,6 +12,12 @@ const nextConfig = {
         basePath: false,
         permanent: false,
       },
+      {
+        source: '/login',
+        destination: '/report-portal/login/',
+        basePath: false,
+        permanent: false,
+      },
     ];
   },
 };
