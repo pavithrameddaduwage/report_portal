@@ -6,7 +6,7 @@ import { User } from '../users/entities/user.entity';
 import { RoleMaster } from '../users/entities/role_master.entity';
 import { ADUser } from './interfaces/ad-user.interface';
 
-const ActiveDirectory = require('activedirectory2').promiseWrapper;
+const ActiveDirectory = require('activedirectory2');
 
 const config = {
     url: process.env.LDAP_URL || 'ldap://HGUNBXDC01VM.Horizongroupusa.com',
@@ -208,38 +208,81 @@ export class AuthService {
   async searchUsers(query: string): Promise<any[]> {
     if (!query || query.trim().length === 0) return [];
     const q = query.toLowerCase().trim();
-    const searchQuery = `(&(objectClass=user)(|(cn=*${query}*)(mail=*${query}*)))`;
-    let searchCompleted = false;
 
-    const adPromise = new Promise<any[]>((resolve) => {
-      try {
-        ad.findUsers(searchQuery, true, (err: any, users: any[]) => {
-          if (searchCompleted) return;
-          if (err || !users || users.length === 0) {
-            return resolve([]);
+    // 1. Query local database users for instant response
+    let localMatches: any[] = [];
+    try {
+      const dbUsers = await this.userRepository.find({
+        where: [
+          { name: ILike(`%${q}%`) },
+          { email: ILike(`%${q}%`) },
+        ],
+        take: 10,
+      });
+      localMatches = dbUsers.map((u) => ({
+        name: u.name,
+        email: (u.email || '').toLowerCase().trim(),
+        department: 'Registered User',
+      }));
+    } catch (e) {
+      console.warn('Local user search notice:', e?.message);
+    }
+
+    // 2. Query Active Directory LDAP
+    const searchQuery = `(&(objectClass=user)(|(cn=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)))`;
+    let adMatches: any[] = [];
+
+    try {
+      const adPromise = new Promise<any[]>((resolve) => {
+        let isDone = false;
+        try {
+          ad.findUsers(searchQuery, true, (err: any, users: any[]) => {
+            if (isDone) return;
+            isDone = true;
+            if (err || !users || !Array.isArray(users)) {
+              return resolve([]);
+            }
+            const formatted = users
+              .filter((f: any) => f && (f.mail || f.cn || f.sAMAccountName))
+              .map((f: any) => ({
+                name: f.cn || f.displayName || f.sAMAccountName || '',
+                email: (f.mail || `${f.sAMAccountName}@horizongroupusa.com`).toLowerCase().trim(),
+                department: f.department || '',
+              }));
+            resolve(formatted);
+          });
+        } catch (e) {
+          if (!isDone) {
+            isDone = true;
+            resolve([]);
           }
-          const formattedUsers = users
-            .filter((f: any) => f.mail || f.cn)
-            .map((f: any) => ({
-              name: f.cn || f.displayName || f.sAMAccountName || '',
-              email: (f.mail || `${f.sAMAccountName}@horizongroupusa.com`).toLowerCase(),
-              department: f.department || '',
-            }));
-          searchCompleted = true;
-          resolve(formattedUsers);
-        });
-      } catch (error) {
-        resolve([]);
-      }
-      setTimeout(() => {
-        if (!searchCompleted) {
-          searchCompleted = true;
-          resolve([]);
         }
-      }, 3000);
-    });
 
-    const results = await adPromise;
-    return results || [];
+        setTimeout(() => {
+          if (!isDone) {
+            isDone = true;
+            resolve([]);
+          }
+        }, 3000);
+      });
+
+      adMatches = await adPromise;
+    } catch (e) {
+      console.warn('AD user search notice:', e?.message);
+    }
+
+    // Merge and deduplicate by email
+    const seenEmails = new Set<string>();
+    const combined: any[] = [];
+
+    for (const u of [...adMatches, ...localMatches]) {
+      const em = (u.email || '').toLowerCase().trim();
+      if (em && !seenEmails.has(em)) {
+        seenEmails.add(em);
+        combined.push(u);
+      }
+    }
+
+    return combined;
   }
 }
