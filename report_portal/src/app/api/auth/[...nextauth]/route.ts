@@ -17,10 +17,10 @@ const authOptions:any = {
         }
 
         const config = {
-          url: "ldaps://HGUNBXDC01VM.Horizongroupusa.com",  // Change to your AD server URL
-          baseDN: "dc=Horizongroupusa,dc=com",  // Change to your domain
-          username: 'MISSVCACC', // Use domain\username format
-          password: 'Horizon@MIS',
+          url: process.env.LDAP_URL || "ldaps://HGUNBXDC01VM.Horizongroupusa.com",
+          baseDN: process.env.LDAP_BASE_DN || "dc=Horizongroupusa,dc=com",
+          username: process.env.LDAP_USERNAME || 'MISSVCACC',
+          password: process.env.LDAP_PASSWORD || 'Horizon@MIS',
         };
 
         const ad = new ActiveDirectory(config);
@@ -50,8 +50,6 @@ const authOptions:any = {
             });
           });
 
-          console.log("Authenticated User:", user);
-
           // ✅ 3️⃣ Return user object
           return {
             id: user.sAMAccountName,
@@ -74,14 +72,12 @@ const authOptions:any = {
         token.name = user.name;
         token.email = user.email;
       }
-      console.log("JWT Token:", token);
       return token;
     },
     async session({ session, token }:any) {
       session.user.id = token.id;
       session.user.name = token.name;
       session.user.email = token.email;
-      console.log("Session Data:", session);
       return session;
     },
   },

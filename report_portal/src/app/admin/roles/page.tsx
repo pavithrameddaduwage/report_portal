@@ -31,6 +31,7 @@ import {
   Monitor,
   Home,
   Users,
+  Clock,
   Download,
   Filter,
   Check,
@@ -62,6 +63,12 @@ const AVAILABLE_PERMISSIONS = [
     label: "User Management",
     description: "Add, edit users, and configure workspace permissions",
     icon: Users,
+  },
+  {
+    id: "report_scheduler",
+    label: "Report Scheduler & Automation",
+    description: "Create, configure, execute, and monitor automated report email dispatches",
+    icon: Clock,
   },
   {
     id: "roles_permissions",
@@ -188,7 +195,7 @@ export default function RolesManagementPage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full items-start">
       {/* Left Column: Role Form Card */}
-      <div className="lg:col-span-7 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+      <div className="lg:col-span-6 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#edf3f9]">
           <div className="w-8 h-8 rounded-lg bg-[#eaf4fd] text-[#2f8fe0] flex items-center justify-center">
             <Key className="w-4 h-4" />
@@ -314,7 +321,7 @@ export default function RolesManagementPage() {
       </div>
 
       {/* Right Column: Existing Roles */}
-      <div className="lg:col-span-5 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+      <div className="lg:col-span-6 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[13px] font-bold text-[#0a1c30]">Existing Roles</h2>
           <span className="text-[11px] bg-[#f0f6fc] text-[#1e5f99] font-bold px-2 py-0.5 rounded-full">

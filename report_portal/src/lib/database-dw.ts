@@ -5,14 +5,13 @@ import { DataSource } from "typeorm";
 
 const AppDWDataSource = new DataSource({
   type: "postgres",
-  host: '10.15.1.37',
-  port: 7102,
-  username: 'hgbi_view',
-  password: 'hgbi_view',
-  database: 'postgres',
+  host: process.env.DW_HOST || '10.15.1.37',
+  port: Number(process.env.DW_PORT) || 7102,
+  username: process.env.DW_USER || 'hgbi_view',
+  password: process.env.DW_PASSWORD || 'hgbi_view',
+  database: process.env.DW_NAME || 'postgres',
   synchronize: false, // disable in production
   logging: false,
-
 });
 
 // Initialize connection
@@ -20,7 +19,7 @@ export const initializeDW_DB = async () => {
   try {
     if (!AppDWDataSource.isInitialized) {
         await AppDWDataSource.initialize();
-        console.log("✅ Database connected!");
+        console.log("✅ Datawarehouse connected!");
       }
 
   } catch (error) {

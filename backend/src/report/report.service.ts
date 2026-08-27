@@ -25,7 +25,6 @@ export class ReportService {
     }
 
     createReport(data:any){
-        console.log(data)
         const report=new Report()
         report.report_name=data.report_name
         report.report_view=data.report_view
@@ -59,7 +58,6 @@ export class ReportService {
     }
 
   async createDisplayView(displayviewDto:any){
-    console.log(displayviewDto)
             // 1) If it has an ID, load the existing row + columns; else start fresh
             const dv = (displayviewDto.id && displayviewDto.id!==0)
               ? await this.displayviewRepository.findOne({

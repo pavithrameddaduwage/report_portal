@@ -45,6 +45,7 @@ export class UsersService implements OnModuleInit {
               'display_view',
               'workspace_management',
               'user_management',
+              'report_scheduler',
               'roles_permissions',
               'csv_export',
               'filter_sort',
@@ -60,7 +61,7 @@ export class UsersService implements OnModuleInit {
           },
           {
             role: 'Manager',
-            permissions: JSON.stringify(['workspace_management', 'csv_export', 'filter_sort']),
+            permissions: JSON.stringify(['workspace_management', 'report_scheduler', 'csv_export', 'filter_sort']),
           },
         ];
 
@@ -71,6 +72,18 @@ export class UsersService implements OnModuleInit {
           await this.roleRepository.save(roleObj);
         }
         console.log('[Bootstrap] Role & Permission Master Data created successfully.');
+      } else {
+        // Ensure Admin role has report_scheduler if seed was previously run
+        const adminRole = existing.find(r => r.role === 'Admin');
+        if (adminRole) {
+          let perms: string[] = [];
+          try { perms = JSON.parse(adminRole.permissions || '[]'); } catch (e) {}
+          if (!perms.includes('report_scheduler')) {
+            perms.push('report_scheduler');
+            adminRole.permissions = JSON.stringify(perms);
+            await this.roleRepository.save(adminRole);
+          }
+        }
       }
     } catch (err) {
       console.warn('[Bootstrap] Role seeding notice:', err?.message);
@@ -114,6 +127,7 @@ export class UsersService implements OnModuleInit {
     newuser.displayviews = displayviews;
     newuser.id = user.id;
     newuser.is_admin = user.is_admin === true || user.role === 'Admin';
+    newuser.role = user.role || (newuser.is_admin ? 'Admin' : 'User');
 
     if (!user.id || user.id == null || user.id == 0) {
       delete newuser.id;

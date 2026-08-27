@@ -33,7 +33,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Search, UserCheck } from "lucide-react";
+import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users } from "lucide-react";
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -50,6 +50,11 @@ const UserMaster = () => {
     { id: 1, role: "Admin" },
     { id: 2, role: "User" },
   ]);
+
+  // Existing Users Pagination & Search state
+  const [tableSearch, setTableSearch] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const PAGE_SIZE = 6;
 
   // AD Suggestions state
   const [adSuggestions, setAdSuggestions] = useState<any[]>([]);
@@ -213,10 +218,25 @@ const UserMaster = () => {
     }
   };
 
+  // Filtered and Paginated users
+  const filteredUsers = users.filter((u: any) => {
+    if (!tableSearch.trim()) return true;
+    const query = tableSearch.toLowerCase().trim();
+    const nameMatch = (u.name || "").toLowerCase().includes(query);
+    const emailMatch = (u.email || "").toLowerCase().includes(query);
+    const roleMatch = (u.role || (u.is_admin ? "Admin" : "User")).toLowerCase().includes(query);
+    return nameMatch || emailMatch || roleMatch;
+  });
+
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + PAGE_SIZE);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full items-start">
-      {/* Left Column: Form Card */}
-      <div className="lg:col-span-7 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+      {/* Left Column: Form Card (Reduced width) */}
+      <div className="lg:col-span-5 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* 1. EMAIL ADDRESS (Top Field with AD Autocomplete) */}
@@ -380,34 +400,58 @@ const UserMaster = () => {
         </Form>
       </div>
 
-      {/* Right Column: Existing Users */}
-      <div className="lg:col-span-5 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
-        <h2 className="text-[13px] font-bold text-[#0a1c30] mb-3">Existing users</h2>
+      {/* Right Column: Existing Users (Expanded width + 6-item pagination) */}
+      <div className="lg:col-span-7 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
+        {/* Card Header with Search & Count */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#edf3f9]">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[13px] font-bold text-[#0a1c30]">Existing users</h2>
+            <span className="text-[11px] bg-[#f0f6fc] text-[#1e5f99] font-bold px-2 py-0.5 rounded-full border border-[#dce6f1]">
+              {filteredUsers.length}
+            </span>
+          </div>
+
+          {/* Quick Filter Input */}
+          <div className="relative w-full sm:w-56">
+            <Input
+              value={tableSearch}
+              onChange={(e) => {
+                setTableSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Filter users..."
+              className="h-7 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs pl-7 pr-3"
+            />
+            <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2 top-2 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Users Table */}
         <div className="overflow-x-auto w-full">
-          <Table className="text-xs min-w-[340px]">
+          <Table className="text-xs min-w-[380px]">
             <TableHeader className="bg-[#edf4fa]">
               <TableRow className="border-[#dce6f1]">
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">NAME</TableHead>
+                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">NAME & EMAIL</TableHead>
                 <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ROLE</TableHead>
                 <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ACTION</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.length === 0 ? (
+              {paginatedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-6 text-[#5c7f9f]">
-                    No users configured
+                  <TableCell colSpan={3} className="text-center py-8 text-[#5c7f9f]">
+                    {tableSearch ? "No users match your filter" : "No users configured"}
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((u: any) => (
+                paginatedUsers.map((u: any) => (
                   <TableRow key={u.id} className="border-[#dce6f1] hover:bg-[#f6fafc] transition-colors">
-                    <TableCell className="whitespace-nowrap">
-                      <div className="font-medium text-[#0f2b48]">{u.name}</div>
-                      <div className="text-[11px] text-[#5c7f9f] truncate max-w-[150px]">{u.email}</div>
+                    <TableCell className="py-2.5">
+                      <div className="font-semibold text-[#0f2b48]">{u.name}</div>
+                      <div className="text-[11px] text-[#5c7f9f] truncate">{u.email}</div>
                     </TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    <TableCell className="text-xs py-2.5 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         u.role === "Admin" || u.is_admin
                           ? "bg-[#eaf4fd] text-[#1e5f99] border border-[#c8dced]"
                           : "bg-[#f0f6fc] text-[#335375] border border-[#dce6f1]"
@@ -415,19 +459,19 @@ const UserMaster = () => {
                         {u.role || (u.is_admin ? "Admin" : "User")}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center whitespace-nowrap">
+                    <TableCell className="text-center py-2.5 whitespace-nowrap">
                       <div className="flex gap-2 justify-center">
                         <button
                           type="button"
                           onClick={() => handleEditUser(u)}
-                          className="border border-[#dce6f1] rounded px-2.5 py-0.5 text-[11px] text-[#0e2947] hover:bg-[#f0f6fc] transition-colors"
+                          className="border border-[#dce6f1] rounded px-2.5 py-1 text-[11px] text-[#0e2947] hover:bg-[#f0f6fc] font-medium transition-colors cursor-pointer"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteUser(u.id)}
-                          className="border border-red-200 text-red-500 hover:bg-red-50 rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors"
+                          className="border border-red-200 text-red-500 hover:bg-red-50 rounded px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer"
                         >
                           Delete
                         </button>
@@ -439,9 +483,81 @@ const UserMaster = () => {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination Controls (6 items per page) */}
+        {filteredUsers.length > PAGE_SIZE && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-2 border-t border-[#edf3f9]">
+            <div className="text-[11px] text-[#5c7f9f]">
+              Showing <span className="font-semibold text-[#0f2b48]">{startIndex + 1}</span> to{" "}
+              <span className="font-semibold text-[#0f2b48]">{Math.min(startIndex + PAGE_SIZE, filteredUsers.length)}</span> of{" "}
+              <span className="font-semibold text-[#0f2b48]">{filteredUsers.length}</span> users
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safeCurrentPage <= 1}
+                className="h-7 px-2 text-xs border-[#dce6f1] text-[#0f2b48] hover:bg-[#f0f6fc] disabled:opacity-40"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> Prev
+              </Button>
+
+              {/* Page Number Pills */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((page) => {
+                    // Show first page, last page, and pages around current page
+                    return (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= safeCurrentPage - 1 && page <= safeCurrentPage + 1)
+                    );
+                  })
+                  .map((page, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && page - prev > 1;
+
+                    return (
+                      <React.Fragment key={page}>
+                        {showEllipsis && (
+                          <span className="px-1 text-[11px] text-[#8aa6bf]">...</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(page)}
+                          className={`h-7 min-w-[28px] px-2 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                            safeCurrentPage === page
+                              ? "bg-[#0e2947] text-white"
+                              : "bg-[#f6f9fc] text-[#335375] hover:bg-[#eaf4fd] border border-[#dce6f1]"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage >= totalPages}
+                className="h-7 px-2 text-xs border-[#dce6f1] text-[#0f2b48] hover:bg-[#f0f6fc] disabled:opacity-40"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default UserMaster;
+

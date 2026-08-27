@@ -23,21 +23,18 @@ export class WorkspaceController {
   @Public()
   @Get('findWorkspaceById/:id')
   findWorkspaceById(@Param('id') id:number){
-    console.log("id",id)
     return this.workspaceService.findWorkspaceById(+id)
   }
 
   @Public()
   @Post('createWorkspace')
   createWorkspace(@Body() data:any){
-    console.log("data",data)
     return this.workspaceService.createWorkspace(data)
   }
 
   @Public()
   @Delete('deleteWorkspace/:id')
   deleteWorkspace(@Param('id') id:number){
-    console.log("id",id)
     return this.workspaceService.deleteWorkspace(+id)
   }
 

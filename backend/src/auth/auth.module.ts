@@ -8,12 +8,13 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './guards/auth.guard';
 import { PowerBiAuthService } from './powerbi-auth.service';
 import { User } from '../users/entities/user.entity';
+import { RoleMaster } from '../users/entities/role_master.entity';
 
 @Global()
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RoleMaster]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

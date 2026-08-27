@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { InjectDataSource, TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WorkspaceModule } from './workspace/workspace.module';
@@ -9,6 +9,7 @@ import { ReportModule } from './report/report.module';
 import { UsersModule } from './users/users.module';
 import { DatawarehouseModule } from './datawarehouse/datawarehouse.module';
 import { AuthModule } from './auth/auth.module';
+import { DataSource } from 'typeorm';
 
 @Module({
   imports: [
@@ -48,4 +49,19 @@ import { AuthModule } from './auth/auth.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  constructor(
+    @InjectDataSource('default') private readonly defaultDataSource: DataSource,
+    @InjectDataSource('datawarehouse') private readonly dwDataSource: DataSource,
+  ) {}
+
+  async onModuleInit() {
+    if (this.defaultDataSource.isInitialized) {
+      console.log('✅ Connected to PostgreSQL Database (report_portal_db)');
+    }
+    if (this.dwDataSource.isInitialized) {
+      console.log('✅ Connected to Datawarehouse Database');
+    }
+  }
+}
+

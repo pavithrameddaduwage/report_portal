@@ -25,6 +25,11 @@ export function AppSidebar() {
     canManageWorkspaces: true,
     canConfigureReports: true,
     canConfigureDisplayViews: true,
+    canScheduleReports: true,
+    canManageRoles: true,
+    canExportCsv: true,
+    canFilterSort: true,
+    permissions: [],
   });
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Record<number, boolean>>({});
@@ -92,7 +97,7 @@ export function AppSidebar() {
       </div>
 
       {/* Main Nav Items */}
-      <div className="px-3 flex-1 flex flex-col overflow-y-auto">
+      <div className="px-3 flex-1 flex flex-col overflow-y-auto no-scrollbar">
         <div className="flex flex-col gap-1 mb-6">
           <Link
             href="/workspaces"
@@ -106,17 +111,27 @@ export function AppSidebar() {
             <span>Workspaces</span>
           </Link>
 
-          <Link
-            href="/admin/report_configuration"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
-              isAdminRoute
-                ? "bg-[#173759] text-white font-semibold"
-                : "text-[#8fa3b7] hover:text-white hover:bg-white/[0.04]"
-            }`}
-          >
-            <Shield className="w-4 h-4 text-[#2f8fe0]" />
-            <span>Admin Panel</span>
-          </Link>
+          {permissions.canAccessAdminPanel && (
+            <Link
+              href={
+                permissions.canConfigureReports
+                  ? "/admin/report_configuration"
+                  : permissions.canScheduleReports
+                  ? "/admin/report_scheduler"
+                  : permissions.canManageWorkspaces
+                  ? "/admin/workspace_master"
+                  : "/admin/user_management"
+              }
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                isAdminRoute
+                  ? "bg-[#173759] text-white font-semibold"
+                  : "text-[#8fa3b7] hover:text-white hover:bg-white/[0.04]"
+              }`}
+            >
+              <Shield className="w-4 h-4 text-[#2f8fe0]" />
+              <span>Admin Panel</span>
+            </Link>
+          )}
         </div>
 
         {/* Admin Sections OR Workspace Tree */}
@@ -127,30 +142,31 @@ export function AppSidebar() {
             </span>
             <div className="flex flex-col gap-1">
               {[
-                { title: "Report", url: "/admin/report_configuration", icon: FileText },
-                { title: "Display View", url: "/admin/display_view", icon: Monitor },
-                { title: "Workspace", url: "/admin/workspace_master", icon: Home },
-                { title: "Users", url: "/admin/user_management", icon: Users },
-                { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock },
-                { title: "Roles & Permissions", url: "/admin/roles", icon: Key },
-              ].map((item) => {
-
-                const isActive = pathname?.startsWith(item.url);
-                return (
-                  <Link
-                    key={item.title}
-                    href={item.url}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
-                      isActive
-                        ? "bg-[#173759] text-white font-semibold"
-                        : "text-[#8fa3b7] hover:text-white hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
-                  </Link>
-                );
-              })}
+                { title: "Report", url: "/admin/report_configuration", icon: FileText, visible: permissions.canConfigureReports },
+                { title: "Display View", url: "/admin/display_view", icon: Monitor, visible: permissions.canConfigureDisplayViews },
+                { title: "Workspace", url: "/admin/workspace_master", icon: Home, visible: permissions.canManageWorkspaces },
+                { title: "Users", url: "/admin/user_management", icon: Users, visible: permissions.canManageUsers },
+                { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock, visible: permissions.canScheduleReports },
+                { title: "Roles & Permissions", url: "/admin/roles", icon: Key, visible: permissions.canManageRoles },
+              ]
+                .filter((item) => item.visible)
+                .map((item) => {
+                  const isActive = pathname?.startsWith(item.url);
+                  return (
+                    <Link
+                      key={item.title}
+                      href={item.url}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+                        isActive
+                          ? "bg-[#173759] text-white font-semibold"
+                          : "text-[#8fa3b7] hover:text-white hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  );
+                })}
             </div>
           </div>
         ) : (

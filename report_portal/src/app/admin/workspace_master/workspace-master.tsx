@@ -104,8 +104,8 @@ const WorkspaceMaster = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full items-start">
-      {/* Left Column: Form */}
-      <div className="lg:col-span-7 bg-white rounded-xl border border-[#c8dced] p-5 shadow-2xs">
+      {/* Left Column: Form (Narrower) */}
+      <div className="lg:col-span-4 bg-white rounded-xl border border-[#c8dced] p-5 shadow-2xs">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -152,7 +152,7 @@ const WorkspaceMaster = () => {
               </Button>
               <Button
                 type="submit"
-                className="h-8 text-xs px-5 rounded-md bg-[#1890ff] hover:bg-[#096dd9] text-white font-semibold shadow-2xs"
+                className="h-8 text-xs px-5 rounded-md bg-[#1890ff] hover:bg-[#096dd9] text-white font-semibold shadow-2xs cursor-pointer"
               >
                 {selectedWorkspace?.id ? "Update" : "Save"}
               </Button>
@@ -161,8 +161,8 @@ const WorkspaceMaster = () => {
         </Form>
       </div>
 
-      {/* Right Column: Existing Workspaces */}
-      <div className="lg:col-span-5 bg-white rounded-xl border border-[#c8dced] p-5 shadow-2xs">
+      {/* Right Column: Existing Workspaces (Wider) */}
+      <div className="lg:col-span-8 bg-white rounded-xl border border-[#c8dced] p-5 shadow-2xs">
         <h2 className="text-[13px] font-bold text-[#0a1c30] mb-3">Existing workspaces</h2>
         <div className="overflow-x-auto w-full">
           <Table className="text-xs min-w-[340px]">

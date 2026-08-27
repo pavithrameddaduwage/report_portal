@@ -18,6 +18,9 @@ export class User{
     @Column({default:false})
     is_admin:boolean
 
+    @Column({nullable:true, default: 'User'})
+    role: string;
+
     @ManyToMany(()=>Workspace,workspace=>workspace.users)
     @JoinTable() 
     workspaces:Workspace[]

@@ -45,7 +45,6 @@ export class DatawarehouseController {
 
   @Post('getItemsforDropdown')
   getItemsforDropdown(@Body() data:{schema:string,view:string,column:string}){
-    console.log(data)
     return this.datawarehouseService.getItemsforDropdown(data)
   }
   }

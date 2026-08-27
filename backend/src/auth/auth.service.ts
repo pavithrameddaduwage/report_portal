@@ -3,15 +3,16 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { User } from '../users/entities/user.entity';
+import { RoleMaster } from '../users/entities/role_master.entity';
 import { ADUser } from './interfaces/ad-user.interface';
 
 const ActiveDirectory = require('activedirectory2').promiseWrapper;
 
 const config = {
-    url: 'ldap://HGUNBXDC01VM.Horizongroupusa.com',
-    baseDN: 'dc=Horizongroupusa,dc=com',
-    username: 'MISSVCACC',
-    password: 'Horizon@MIS',
+    url: process.env.LDAP_URL || 'ldap://HGUNBXDC01VM.Horizongroupusa.com',
+    baseDN: process.env.LDAP_BASE_DN || 'dc=Horizongroupusa,dc=com',
+    username: process.env.LDAP_USERNAME || 'MISSVCACC',
+    password: process.env.LDAP_PASSWORD || 'Horizon@MIS',
     attributes:{
       user:[]
     },
@@ -30,6 +31,8 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(RoleMaster)
+    private roleRepository: Repository<RoleMaster>,
   ) {}
 
   async authenticateuser(username: string, password: string): Promise<boolean> {
@@ -73,11 +76,23 @@ export class AuthService {
     // ── Dev bypass: admin / admin ─────────────────────────────
     if (username === 'admin' && pass === 'admin') {
       console.log('[DEV] Admin bypass login used');
+      const allPermissions = [
+        'report_config',
+        'display_view',
+        'workspace_management',
+        'user_management',
+        'report_scheduler',
+        'roles_permissions',
+        'csv_export',
+        'filter_sort',
+      ];
       const payload = {
         email: 'admin@hgusa.com',
         name: 'Admin',
         userid: 0,
+        role: 'Admin',
         roles: ['Admin', 'admin'],
+        permissions: allPermissions,
         is_admin: true,
         department: 'MIS',
         location: null,
@@ -120,6 +135,9 @@ export class AuthService {
 
     // Role check & First Login Superadmin appointment
     let isUserAdmin = false;
+    let userRole = 'User';
+    let permissions: string[] = [];
+
     try {
       const totalUsersCount = await this.userRepository.count();
       const existingDbUser = await this.userRepository.findOne({
@@ -133,10 +151,38 @@ export class AuthService {
         firstAdmin.name = aduser.cn || username;
         firstAdmin.email = email;
         firstAdmin.is_admin = true;
+        firstAdmin.role = 'Admin';
         await this.userRepository.save(firstAdmin);
         isUserAdmin = true;
+        userRole = 'Admin';
       } else if (existingDbUser) {
-        isUserAdmin = Boolean(existingDbUser.is_admin);
+        isUserAdmin = Boolean(existingDbUser.is_admin) || existingDbUser.role === 'Admin';
+        userRole = existingDbUser.role || (isUserAdmin ? 'Admin' : 'User');
+      }
+
+      // Fetch permissions configured for this role from RoleMaster
+      if (isUserAdmin) {
+        permissions = [
+          'report_config',
+          'display_view',
+          'workspace_management',
+          'user_management',
+          'report_scheduler',
+          'roles_permissions',
+          'csv_export',
+          'filter_sort',
+        ];
+      } else {
+        const roleRecord = await this.roleRepository.findOne({ where: { role: userRole } });
+        if (roleRecord && roleRecord.permissions) {
+          try {
+            permissions = JSON.parse(roleRecord.permissions);
+          } catch (e) {
+            permissions = ['csv_export', 'filter_sort'];
+          }
+        } else {
+          permissions = ['csv_export', 'filter_sort'];
+        }
       }
     } catch (dbError) {
       console.warn('User DB lookup warning on login:', dbError?.message);
@@ -146,7 +192,9 @@ export class AuthService {
       email: email,
       name: aduser.cn || username,
       userid: username,
-      roles: isUserAdmin ? ['Admin', 'User'] : ['User'],
+      role: userRole,
+      roles: isUserAdmin ? ['Admin', userRole] : [userRole],
+      permissions: permissions,
       is_admin: isUserAdmin,
       department: aduser.department,
       location: aduser.location
