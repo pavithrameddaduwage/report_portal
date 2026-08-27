@@ -194,10 +194,29 @@ export class UsersService implements OnModuleInit {
           permissions: f.permissions ? JSON.parse(f.permissions) : [],
         }));
       }
-      return roles.map((f) => ({
-        ...f,
-        permissions: f.permissions ? JSON.parse(f.permissions) : [],
-      }));
+
+      // Check if Admin role exists and has report_scheduler; if not, patch it in memory and DB
+      let modified = false;
+      const parsedRoles = roles.map((f) => {
+        let perms: string[] = [];
+        try {
+          perms = f.permissions ? JSON.parse(f.permissions) : [];
+        } catch (e) {
+          perms = [];
+        }
+        if (f.role && f.role.toLowerCase() === 'admin' && !perms.includes('report_scheduler')) {
+          perms.push('report_scheduler');
+          f.permissions = JSON.stringify(perms);
+          modified = true;
+          this.roleRepository.save(f).catch(() => {});
+        }
+        return {
+          ...f,
+          permissions: perms,
+        };
+      });
+
+      return parsedRoles;
     } catch (e) {
       console.error('Error fetching roles from DB:', e?.message);
       return [];
