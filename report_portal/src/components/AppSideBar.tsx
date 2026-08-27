@@ -142,12 +142,12 @@ export function AppSidebar() {
             </span>
             <div className="flex flex-col gap-1">
               {[
-                { title: "Report", url: "/admin/report_configuration", icon: FileText, visible: permissions.canConfigureReports },
-                { title: "Display View", url: "/admin/display_view", icon: Monitor, visible: permissions.canConfigureDisplayViews },
-                { title: "Workspace", url: "/admin/workspace_master", icon: Home, visible: permissions.canManageWorkspaces },
-                { title: "Users", url: "/admin/user_management", icon: Users, visible: permissions.canManageUsers },
-                { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock, visible: permissions.canScheduleReports },
-                { title: "Roles & Permissions", url: "/admin/roles", icon: Key, visible: permissions.canManageRoles },
+                { title: "Report", url: "/admin/report_configuration", icon: FileText, visible: permissions.isAdmin || permissions.canConfigureReports },
+                { title: "Display View", url: "/admin/display_view", icon: Monitor, visible: permissions.isAdmin || permissions.canConfigureDisplayViews },
+                { title: "Workspace", url: "/admin/workspace_master", icon: Home, visible: permissions.isAdmin || permissions.canManageWorkspaces },
+                { title: "Users", url: "/admin/user_management", icon: Users, visible: permissions.isAdmin || permissions.canManageUsers },
+                { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock, visible: permissions.isAdmin || permissions.canScheduleReports },
+                { title: "Roles & Permissions", url: "/admin/roles", icon: Key, visible: permissions.isAdmin || permissions.canManageRoles },
               ]
                 .filter((item) => item.visible)
                 .map((item) => {

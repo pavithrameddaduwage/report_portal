@@ -53,24 +53,30 @@ export function getUserPermissions(): UserPermissions {
 
   try {
     const decoded: any = jwtDecode(token);
-    const roles: string[] = Array.isArray(decoded.roles) ? decoded.roles : [];
+    const rawRole = String(decoded.role || "").toLowerCase();
     const isAdmin =
       decoded.is_admin === true ||
-      roles.some((r) => String(r).toLowerCase() === "admin") ||
+      decoded.isAdmin === true ||
+      rawRole === "admin" ||
+      rawRole === "administrator" ||
+      roles.some((r) => {
+        const str = String(r).toLowerCase();
+        return str === "admin" || str === "administrator";
+      }) ||
       decoded.email?.toLowerCase() === "admin@hgusa.com";
 
     const userPerms: string[] = Array.isArray(decoded.permissions) ? decoded.permissions : [];
 
     const hasPerm = (perm: string) => isAdmin || userPerms.includes(perm);
 
-    const canManageUsers = hasPerm("user_management");
-    const canManageWorkspaces = hasPerm("workspace_management");
-    const canConfigureReports = hasPerm("report_config");
-    const canConfigureDisplayViews = hasPerm("display_view");
-    const canScheduleReports = hasPerm("report_scheduler") || hasPerm("scheduler");
-    const canManageRoles = hasPerm("roles_permissions");
-    const canExportCsv = hasPerm("csv_export");
-    const canFilterSort = hasPerm("filter_sort");
+    const canManageUsers = isAdmin || hasPerm("user_management");
+    const canManageWorkspaces = isAdmin || hasPerm("workspace_management");
+    const canConfigureReports = isAdmin || hasPerm("report_config");
+    const canConfigureDisplayViews = isAdmin || hasPerm("display_view");
+    const canScheduleReports = isAdmin || hasPerm("report_scheduler") || hasPerm("scheduler");
+    const canManageRoles = isAdmin || hasPerm("roles_permissions");
+    const canExportCsv = isAdmin || hasPerm("csv_export");
+    const canFilterSort = isAdmin || hasPerm("filter_sort");
 
     const canAccessAdminPanel =
       isAdmin ||
