@@ -4,18 +4,10 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === '/' || pathname === '') {
-    return NextResponse.redirect(new URL('/report-portal/login/', request.url));
-  }
-
-  if (
-    !pathname.startsWith('/report-portal') &&
-    !pathname.startsWith('/_next') &&
-    !pathname.startsWith('/api') &&
-    !pathname.includes('.')
-  ) {
-    const target = pathname.endsWith('/') ? pathname : `${pathname}/`;
-    return NextResponse.redirect(new URL(`/report-portal${target}`, request.url));
+  // Seamlessly redirect any /report-portal/* requests to /*
+  if (pathname.startsWith('/report-portal')) {
+    const newPath = pathname.replace(/^\/report-portal/, '') || '/';
+    return NextResponse.redirect(new URL(newPath, request.url));
   }
 
   return NextResponse.next();

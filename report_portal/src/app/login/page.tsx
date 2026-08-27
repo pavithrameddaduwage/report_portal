@@ -65,7 +65,7 @@ export default function LoginPage() {
         {/* Brand Header */}
         <div className="text-center mb-7 flex flex-col items-center">
           <img
-            src="/report-portal/logo.png"
+            src="/logo.png"
             alt="Horizon Logo"
             className="w-14 h-14 object-contain mb-3 drop-shadow-sm"
           />

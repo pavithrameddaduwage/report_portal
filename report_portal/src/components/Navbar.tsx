@@ -53,7 +53,7 @@ const Navbar = () => {
       <div className="flex items-center gap-3">
         <Link href="/workspaces" className="flex items-center gap-3">
           <img 
-            src="/report-portal/horizontal-blue-hgu-logo.png" 
+            src="/horizontal-blue-hgu-logo.png" 
             alt="Horizon Group USA" 
             className="h-7 object-contain"
             onError={(e: any) => {
