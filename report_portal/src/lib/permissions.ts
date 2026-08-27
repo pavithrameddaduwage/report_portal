@@ -53,6 +53,7 @@ export function getUserPermissions(): UserPermissions {
 
   try {
     const decoded: any = jwtDecode(token);
+    const roles: string[] = Array.isArray(decoded.roles) ? decoded.roles : [];
     const rawRole = String(decoded.role || "").toLowerCase();
     const isAdmin =
       decoded.is_admin === true ||

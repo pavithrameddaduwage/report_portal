@@ -33,7 +33,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users, X } from "lucide-react";
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -411,18 +411,31 @@ const UserMaster = () => {
             </span>
           </div>
 
-          {/* Quick Filter Input */}
-          <div className="relative w-full sm:w-56">
+          {/* Search Filter Input with Clear Button */}
+          <div className="relative w-full sm:w-64">
             <Input
               value={tableSearch}
               onChange={(e) => {
                 setTableSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Filter users..."
-              className="h-7 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs pl-7 pr-3"
+              placeholder="Search users by name, email, role..."
+              className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs pl-8 pr-7"
             />
-            <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2 top-2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5 pointer-events-none" />
+            {tableSearch && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTableSearch("");
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2 top-2 text-[#8aa6bf] hover:text-[#0a1c30] p-0.5 rounded cursor-pointer transition-colors"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -440,7 +453,23 @@ const UserMaster = () => {
               {paginatedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center py-8 text-[#5c7f9f]">
-                    {tableSearch ? "No users match your filter" : "No users configured"}
+                    {tableSearch ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <span>No users matching &quot;{tableSearch}&quot;</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTableSearch("");
+                            setCurrentPage(1);
+                          }}
+                          className="text-xs text-[#2f8fe0] hover:underline font-semibold cursor-pointer"
+                        >
+                          Clear search filter
+                        </button>
+                      </div>
+                    ) : (
+                      "No users configured"
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
