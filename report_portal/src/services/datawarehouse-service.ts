@@ -96,3 +96,18 @@ export const getDisplayviewsByReportId = async (id: number): Promise<any> => {
     throw error;
   }
 };
+
+export const getItemsforDropdown = async (data: {
+  view: string;
+  schema: string;
+  column: string;
+}): Promise<any> => {
+  try {
+    const response = await apiClient.post(`/datawarehouse/getItemsforDropdown`, data);
+    return response;
+  } catch (error) {
+    console.error("Error fetching items for dropdown:", error);
+    return { status: 200, data: [] };
+  }
+};
+

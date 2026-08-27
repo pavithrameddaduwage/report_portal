@@ -164,16 +164,23 @@ export class DatawarehouseService {
         query += ` ORDER BY "${sortField}" ${sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}`;
       }
 
-      const countQuery = `SELECT COUNT(*) as count FROM (${query}) as total_count`;
-      const countResult = await this.entityManager.query(countQuery, queryParams);
-      const totalRecords = parseInt(countResult[0]?.count || '0', 10);
-
+      let totalRecords = 0;
       if (!download) {
+        const countQuery = `SELECT COUNT(*) as count FROM (${query}) as total_count`;
+        const countResult = await this.entityManager.query(countQuery, queryParams);
+        totalRecords = parseInt(countResult[0]?.count || '0', 10);
+
         query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
         queryParams.push(pageSize, (page - 1) * pageSize);
+      } else {
+        query += ` LIMIT 50000`;
       }
 
       const rows = await this.entityManager.query(query, queryParams);
+      if (download) {
+        totalRecords = rows.length;
+      }
+
       return {
         data: rows,
         columns: activeColumns,
