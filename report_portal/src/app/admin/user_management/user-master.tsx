@@ -431,9 +431,21 @@ const UserMaster = () => {
                          )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="flex gap-2 justify-center">
-                          <button onClick={() => handleEditUser(u)} className="text-[#0e2947] hover:underline font-medium">Edit</button>
-                          <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:underline font-medium">Delete</button>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleEditUser(u)}
+                            className="text-[#2f8fe0] hover:text-[#1e5f99] border border-[#a6d4fa] text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 bg-[#f0f6fc] hover:bg-[#e1f0fc] px-2 py-1 rounded shadow-sm"
+                          >
+                            <UserPlus className="w-3 h-3" /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u.userid || u.id)}
+                            className="text-red-500 hover:text-red-700 border border-red-200 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2 py-1 rounded shadow-sm"
+                          >
+                            <X className="w-3 h-3" /> Delete
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>
