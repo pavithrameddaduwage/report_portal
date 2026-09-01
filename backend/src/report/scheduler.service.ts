@@ -281,9 +281,9 @@ export class SchedulerService implements OnModuleInit {
         if (dv) displayViewName = dv.displayview_name;
       }
 
-      // 3. Fallback dummy data if no data was returned from live database (for testing & demonstration)
-      if (!reportData || reportData.length === 0) {
-        reportData = this.generateSampleReportData(reportName, displayViewName, columnsList);
+      // 3. Fallback removed. If no data from live DB, CSV will be empty.
+      if (!reportData) {
+        reportData = [];
       }
 
       // 4. Generate CSV buffer (with UTF-8 BOM for Excel opening support)
@@ -374,30 +374,6 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  private generateSampleReportData(reportName: string, displayViewName: string, columns: any[]): any[] {
-    const categories = ['Crafts', 'Office Supplies', 'Activity Kits', 'Fabrics', 'Seasonal Toys', 'Stationery'];
-    const regions = ['North America - East', 'North America - West', 'Midwest Hub', 'South Logistics', 'International'];
-    const statuses = ['Active', 'Completed', 'In Transit', 'Pending Review', 'Approved'];
-
-    const sampleRows = [];
-    for (let i = 1; i <= 25; i++) {
-      const padId = String(1000 + i);
-      sampleRows.push({
-        item_code: `HGU-SKU-${padId}`,
-        description: `Horizon ${categories[i % categories.length]} Pack Series ${i}`,
-        category: categories[i % categories.length],
-        display_view: displayViewName || 'Standard View',
-        quantity: Math.floor(Math.random() * 850) + 50,
-        unit_price: (Math.random() * 45 + 5).toFixed(2),
-        total_amount: (Math.random() * 12500 + 500).toFixed(2),
-        region: regions[i % regions.length],
-        status: statuses[i % statuses.length],
-        report_tag: reportName,
-        created_date: new Date(Date.now() - i * 86400000).toISOString().split('T')[0],
-      });
-    }
-    return sampleRows;
-  }
 
   private async saveLog(
     schedule: ReportSchedule,

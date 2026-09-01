@@ -211,17 +211,6 @@ export default function WorkspacesPage() {
                   </div>
                 </div>
 
-                {/* Card Action Link */}
-                <Link
-                  href={
-                    authReports.length > 0
-                      ? `/workspaces/${workspace.id}?reportId=${authReports[0]?.id}`
-                      : `/workspaces/${workspace.id}`
-                  }
-                  className="mt-2 w-full py-1.5 px-3 bg-[#f0f6fc] hover:bg-[#eaf4fd] text-[#1e5f99] hover:text-[#0a1c30] font-bold text-xs rounded-md text-center transition-colors block cursor-pointer"
-                >
-                  View Workspace
-                </Link>
               </div>
             );
           })}

@@ -289,9 +289,6 @@ export default function RolesManagementPage() {
                             {perm.label}
                           </span>
                         </div>
-                        <p className="text-[10.5px] text-[#5c7f9f] leading-tight mt-0.5 line-clamp-2">
-                          {perm.description}
-                        </p>
                       </div>
                     </div>
                   );
@@ -368,10 +365,21 @@ export default function RolesManagementPage() {
                           <span>{r.role}</span>
                         </span>
                       </TableCell>
-                      <TableCell className="text-[11px] text-[#5c7f9f] whitespace-nowrap">
-                        <span className="bg-[#f6f9fc] text-[#2b5278] border border-[#dce6f1] px-2 py-0.5 rounded font-medium">
-                          {permsCount} of {AVAILABLE_PERMISSIONS.length} privileges
-                        </span>
+                      <TableCell className="text-[11px] text-[#5c7f9f] max-w-[300px]">
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(r.permissions) && r.permissions.length > 0 ? (
+                            r.permissions.map((permId: string) => {
+                              const permInfo = AVAILABLE_PERMISSIONS.find((p) => p.id === permId);
+                              return (
+                                <span key={permId} className="bg-[#f6f9fc] text-[#2b5278] border border-[#dce6f1] px-1.5 py-0.5 text-[10px] rounded font-medium truncate max-w-[150px]">
+                                  {permInfo ? permInfo.label : permId}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-gray-400 italic text-[10px]">No privileges</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center whitespace-nowrap">
                         <div className="flex gap-2 justify-center">

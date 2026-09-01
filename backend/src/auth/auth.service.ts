@@ -173,13 +173,25 @@ export class AuthService {
           'filter_sort',
         ];
       } else {
-        const roleRecord = await this.roleRepository.findOne({ where: { role: userRole } });
-        if (roleRecord && roleRecord.permissions) {
-          try {
-            permissions = JSON.parse(roleRecord.permissions);
-          } catch (e) {
-            permissions = ['csv_export', 'filter_sort'];
+        const roleNames = userRole.split(',').map(r => r.trim()).filter(Boolean);
+        let combinedPerms: string[] = [];
+
+        for (const rn of roleNames) {
+          const roleRecord = await this.roleRepository.findOne({ where: { role: rn } });
+          if (roleRecord && roleRecord.permissions) {
+            try {
+              const parsed = JSON.parse(roleRecord.permissions);
+              if (Array.isArray(parsed)) {
+                combinedPerms.push(...parsed);
+              }
+            } catch (e) {
+              // Ignore parse errors for a single role
+            }
           }
+        }
+
+        if (combinedPerms.length > 0) {
+          permissions = Array.from(new Set(combinedPerms)); // Distinct permissions
         } else {
           permissions = ['csv_export', 'filter_sort'];
         }

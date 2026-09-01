@@ -27,7 +27,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     } else {
       router.push("/login");
     }
-  }, []);
+  }, [reportId]);
 
   const fetchworkspace = async (email: string) => {
     try {

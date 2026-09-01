@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Workspace } from './entities/workspace.entity';
 import { Report } from 'src/report/entities/report.entity';
 import { DisplayView } from 'src/report/entities/displayview.entity';
+import { RoleMaster } from 'src/users/entities/role_master.entity';
 import { In, Repository } from 'typeorm';
 
 @Injectable()
@@ -16,6 +17,8 @@ export class WorkspaceService implements OnModuleInit {
         private readonly reportRepository: Repository<Report>,
         @InjectRepository(DisplayView)
         private readonly displayViewRepository: Repository<DisplayView>,
+        @InjectRepository(RoleMaster)
+        private readonly roleRepository: Repository<RoleMaster>,
     ) {}
 
     async onModuleInit() {
@@ -93,11 +96,31 @@ export class WorkspaceService implements OnModuleInit {
         return this.workspaceRepository.findOne({ where: { id: id }, relations: ['reports'] });
     }
 
-    createWorkspace(workspace: any) {
+    async createWorkspace(workspace: any) {
         if (!workspace.id || workspace.id == 0) {
             delete workspace.id;
         }
-        return this.workspaceRepository.save(workspace);
+        
+        const createdWorkspace = await this.workspaceRepository.save(workspace);
+        
+        try {
+            // Automatically add a role for this workspace if it doesn't exist
+            if (createdWorkspace && createdWorkspace.name) {
+                const roleName = `${createdWorkspace.name} WSMember`;
+                const existingRole = await this.roleRepository.findOne({ where: { role: roleName }});
+                if (!existingRole) {
+                    const newRole = new RoleMaster();
+                    newRole.role = roleName;
+                    newRole.permissions = JSON.stringify(['filter_sort']);
+                    await this.roleRepository.save(newRole);
+                    this.logger.log(`Auto-created role: ${roleName} for workspace ${createdWorkspace.name}`);
+                }
+            }
+        } catch (e) {
+            this.logger.error(`Error auto-creating role for workspace: ${e?.message}`);
+        }
+        
+        return createdWorkspace;
     }
 
     deleteWorkspace(workspaceid: any) {

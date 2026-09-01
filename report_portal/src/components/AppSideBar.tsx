@@ -49,21 +49,56 @@ export function AppSidebar() {
 
   const loadWorkspaces = async (email: string) => {
     try {
-      const wsRes = await findAllWorkspaces();
-      if (wsRes.status === 200) {
-        let wsData = wsRes.data || [];
-        wsData = wsData.map((ws: any) => ({
-          ...ws,
-          reports: (ws.reports || []).map((rpt: any) => ({ ...rpt, authorized: true })),
-        }));
-
-        setWorkspaces(wsData);
-        const initialExpanded: Record<number, boolean> = {};
-        wsData.forEach((w: any) => {
-          initialExpanded[w.id] = true;
-        });
-        setExpandedWorkspaces(initialExpanded);
+      const perms = getUserPermissions();
+      let wsData = [];
+      
+      if (perms.isAdmin) {
+        const wsRes = await findAllWorkspaces();
+        if (wsRes.status === 200) {
+          wsData = wsRes.data || [];
+          wsData = wsData.map((ws: any) => ({
+            ...ws,
+            reports: (ws.reports || []).map((rpt: any) => ({ ...rpt, authorized: true })),
+          }));
+        }
+      } else if (email) {
+        const userRes = await findUserByEmail({ email });
+        if (userRes.status === 200 && userRes.data) {
+           const userData = userRes.data;
+           const userWs = userData.workspaces || [];
+           const userReports = userData.reports || [];
+           
+           wsData = userWs.map((ws: any) => {
+              // Find reports that belong to this workspace AND are assigned to the user
+              const assignedReports = userReports.filter((rpt:any) => rpt.workspace?.id === ws.id || true); 
+              // Wait, in user.reports relation, we might not have workspace eagerly loaded if it's not set to. 
+              // But actually the best way is to fetch all workspaces and filter by user's assigned ones.
+           });
+           
+           // Fetch all to get the tree, then filter
+           const allWsRes = await findAllWorkspaces();
+           if (allWsRes.status === 200) {
+              const allWs = allWsRes.data || [];
+              const assignedWsIds = userWs.map((w:any) => w.id);
+              const assignedRptIds = userReports.map((r:any) => r.id);
+              
+              wsData = allWs
+                .filter((ws: any) => assignedWsIds.includes(ws.id) || (ws.reports || []).some((r:any) => assignedRptIds.includes(r.id)))
+                .map((ws: any) => ({
+                   ...ws,
+                   reports: (ws.reports || []).filter((r:any) => assignedRptIds.includes(r.id)).map((rpt: any) => ({ ...rpt, authorized: true })),
+                }))
+                .filter((ws:any) => ws.reports.length > 0 || assignedWsIds.includes(ws.id));
+           }
+        }
       }
+
+      setWorkspaces(wsData);
+      const initialExpanded: Record<number, boolean> = {};
+      wsData.forEach((w: any) => {
+        initialExpanded[w.id] = true;
+      });
+      setExpandedWorkspaces(initialExpanded);
     } catch (e) {
       console.error("Error loading workspaces in sidebar:", e);
     }
@@ -208,7 +243,8 @@ export function AppSidebar() {
                               <Link
                                 key={rpt.id}
                                 href={`/workspaces/${ws.id}?reportId=${rpt.id}`}
-                                className={`flex items-center gap-2 py-1 px-2 rounded text-[12px] transition-colors truncate ${
+                                prefetch={true}
+                                className={`flex items-center gap-2 py-1 px-2 rounded text-[12px] transition-colors truncate text-left cursor-pointer ${
                                   isRptActive
                                     ? "text-white bg-[#173759] font-medium"
                                     : "text-[#8fa3b7] hover:text-white"

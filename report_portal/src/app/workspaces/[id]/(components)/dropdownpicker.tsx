@@ -7,7 +7,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search, X } from "lucide-react";
 
 interface DropdownPickerProps {
   value: string[];
@@ -24,10 +24,13 @@ const DropdownPicker: React.FC<DropdownPickerProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const [tempValue, setTempValue] = React.useState<string[]>(value || []);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (open) {
       setTempValue(value || []);
+      setSearchQuery("");
     }
   }, [open, value]);
 
@@ -50,6 +53,22 @@ const DropdownPicker: React.FC<DropdownPickerProps> = ({
     setOpen(false);
   };
 
+  const filteredOptions = React.useMemo(() => {
+    if (!searchQuery.trim()) return options;
+    const q = searchQuery.trim().toLowerCase();
+    return options.filter((opt) => String(opt).toLowerCase().includes(q));
+  }, [options, searchQuery]);
+
+  const handleSelectAllFiltered = () => {
+    const stringFiltered = filteredOptions.map((o) => String(o));
+    const allSelected = stringFiltered.every((o) => tempValue.includes(o));
+    if (allSelected) {
+      setTempValue((prev) => prev.filter((item) => !stringFiltered.includes(item)));
+    } else {
+      setTempValue((prev) => Array.from(new Set([...prev, ...stringFiltered])));
+    }
+  };
+
   const label =
     !value || value.length === 0
       ? placeholder
@@ -68,14 +87,55 @@ const DropdownPicker: React.FC<DropdownPickerProps> = ({
           <ChevronDown className="ml-1.5 h-3 w-3 shrink-0 text-[#8aa6bf]" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-52 p-2 space-y-1.5 border border-[#dce6f1] bg-white shadow-md rounded-lg">
+      <PopoverContent className="w-56 p-2 space-y-1.5 border border-[#dce6f1] bg-white shadow-md rounded-lg">
+        {/* Search Input */}
+        <div className="flex items-center px-2 py-1 border border-[#dce6f1] rounded-md bg-[#f8fbfe] focus-within:border-[#2f8fe0] focus-within:ring-1 focus-within:ring-[#2f8fe0]">
+          <Search className="h-3.5 w-3.5 text-[#8aa6bf] mr-1.5 shrink-0" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search options..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent text-xs text-[#0f2b48] placeholder:text-[#8aa6bf] outline-none"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                searchInputRef.current?.focus();
+              }}
+              className="text-[#8aa6bf] hover:text-[#0f2b48] p-0.5 rounded cursor-pointer"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Action bar when searching */}
+        {filteredOptions.length > 0 && options.length > 0 && (
+          <div className="flex justify-between items-center px-1 text-[11px] text-[#5c7f9f]">
+            <span>{filteredOptions.length} of {options.length} options</span>
+            <button
+              type="button"
+              onClick={handleSelectAllFiltered}
+              className="text-[#1890ff] hover:underline cursor-pointer font-medium"
+            >
+              {filteredOptions.every((o) => tempValue.includes(String(o)))
+                ? "Deselect all"
+                : "Select all"}
+            </button>
+          </div>
+        )}
+
         <div className="space-y-0.5 max-h-48 overflow-y-auto">
-          {options.length === 0 ? (
-            <div className="text-[11px] text-[#8aa6bf] text-center py-2">
-              No options available
+          {filteredOptions.length === 0 ? (
+            <div className="text-[11px] text-[#8aa6bf] text-center py-3">
+              {options.length === 0 ? "No options available" : "No matching options"}
             </div>
           ) : (
-            options.map((option, index) => {
+            filteredOptions.map((option, index) => {
               const optStr = String(option);
               const isSelected = tempValue.includes(optStr);
               return (
@@ -119,3 +179,4 @@ const DropdownPicker: React.FC<DropdownPickerProps> = ({
 };
 
 export default DropdownPicker;
+

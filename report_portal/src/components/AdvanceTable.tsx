@@ -119,6 +119,16 @@ const AdvancedTable = ({
     setDisplayViews(allowed_displayviews?.displayViews || []);
   }, [allowed_displayviews]);
 
+  // Reset to default (full report) view whenever the report changes
+  useEffect(() => {
+    setSelectedDisplayView(0);
+    setPage(1);
+    setSortField(undefined);
+    setSortOrder("asc");
+    setColumnFilter({});
+    setResetTrigger((prev) => !prev);
+  }, [reportid]);
+
   const { data, isLoading, isFetching, error, refetch } = useQuery<ReportData, Error>({
     queryKey: [
       "report",
@@ -186,11 +196,6 @@ const AdvancedTable = ({
     setPage(1);
   };
 
-  const handleApplyChanges = () => {
-    refetch();
-    toast.success("Applied changes");
-  };
-
   const handleDownloadCSV = async () => {
     try {
       setIsDownloading(true);
@@ -236,18 +241,18 @@ const AdvancedTable = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-[#0a1c30]">Display View</span>
           <Select
-            value={selecteddisplayview ? selecteddisplayview.toString() : ""}
+            value={selecteddisplayview ? selecteddisplayview.toString() : "0"}
             onValueChange={(e: any) => {
               setSelectedDisplayView(Number(e));
               setPage(1);
             }}
           >
             <SelectTrigger className="h-8 text-xs min-w-36 bg-white border border-[#dce6f1] text-[#0f2b48] rounded-md shadow-2xs">
-              <SelectValue placeholder="Default View" />
+              <SelectValue placeholder={reportname || "Default View"} />
             </SelectTrigger>
             <SelectContent className="text-xs border-[#dce6f1]">
               <SelectGroup>
-                <SelectItem value="0">Default View</SelectItem>
+                <SelectItem value="0">{reportname || "Default View"}</SelectItem>
                 {displayViews?.map((dv: any) => (
                   <SelectItem key={dv.value} value={dv.value.toString()}>
                     {dv.label}
@@ -259,13 +264,6 @@ const AdvancedTable = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            onClick={handleApplyChanges}
-            className="h-8 px-3.5 bg-[#0e2947] hover:bg-[#163e6b] text-white text-xs font-semibold rounded-md shadow-2xs transition-colors cursor-pointer"
-          >
-            Apply changes
-          </Button>
-
           <Button
             onClick={handleDownloadCSV}
             disabled={isdownloading}
