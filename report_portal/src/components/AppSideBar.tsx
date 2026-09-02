@@ -84,10 +84,13 @@ export function AppSidebar() {
               
               wsData = allWs
                 .filter((ws: any) => assignedWsIds.includes(ws.id) || (ws.reports || []).some((r:any) => assignedRptIds.includes(r.id)))
-                .map((ws: any) => ({
-                   ...ws,
-                   reports: (ws.reports || []).filter((r:any) => assignedRptIds.includes(r.id)).map((rpt: any) => ({ ...rpt, authorized: true })),
-                }))
+                .map((ws: any) => {
+                   const hasWsAccess = assignedWsIds.includes(ws.id);
+                   return {
+                     ...ws,
+                     reports: (ws.reports || []).filter((r:any) => hasWsAccess || assignedRptIds.includes(r.id)).map((rpt: any) => ({ ...rpt, authorized: true })),
+                   };
+                })
                 .filter((ws:any) => ws.reports.length > 0 || assignedWsIds.includes(ws.id));
            }
         }
@@ -181,7 +184,7 @@ export function AppSidebar() {
                 { title: "Report", url: "/admin/report_configuration", icon: FileText, visible: permissions.isAdmin || permissions.canConfigureReports },
                 { title: "Display View", url: "/admin/display_view", icon: Monitor, visible: permissions.isAdmin || permissions.canConfigureDisplayViews },
                 { title: "Workspace", url: "/admin/workspace_master", icon: Home, visible: permissions.isAdmin || permissions.canManageWorkspaces },
-                { title: "Users", url: "/admin/user_management", icon: Users, visible: permissions.isAdmin || permissions.canManageUsers },
+                { title: "User & Access Management", url: "/admin/user_management", icon: Users, visible: permissions.isAdmin || permissions.canManageUsers },
                 { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock, visible: permissions.isAdmin || permissions.canScheduleReports },
                 { title: "Roles & Permissions", url: "/admin/roles", icon: Key, visible: permissions.isAdmin || permissions.canManageRoles },
               ]

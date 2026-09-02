@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { createUser, deleteUser, findAllusers, findAllRoles } from "@/services/user-service";
+import { createUser, deleteUser, findAllusers, findAllRoles, bulkAllocateUsers } from "@/services/user-service";
 import { findAllWorkspaces } from "@/services/workspace-services";
 import { searchADUsers } from "@/services/authentication-service";
 import { findAllDisplayViews } from "@/services/report-service";
@@ -13,7 +13,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users, X, Check, Shield } from "lucide-react";
+import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users, X, Check, Shield, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -35,6 +35,8 @@ const UserMaster = () => {
   const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<number[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<number[]>([]);
   const [selectedDisplayViewIds, setSelectedDisplayViewIds] = useState<number[]>([]);
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [bulkSelectedUserIds, setBulkSelectedUserIds] = useState<number[]>([]);
 
   // Existing Users Pagination & Search state
   const [tableSearch, setTableSearch] = useState<string>("");
@@ -171,6 +173,28 @@ const UserMaster = () => {
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to save user");
+    }
+  };
+
+  // STEP 2 BULK: Submit bulk allocations
+  const submitBulkToBackend = async (wsIds: number[], rptIds: number[], dvIds: number[]) => {
+    try {
+      const res = await bulkAllocateUsers({
+        userIds: bulkSelectedUserIds,
+        workspaceIds: wsIds,
+        reportIds: rptIds,
+        displayviewIds: dvIds,
+      });
+      if (res.status === 200 || res.status === 201 || res?.success) {
+        toast.success(`Access updated for ${bulkSelectedUserIds.length} users`);
+        fetchUsers();
+        setBulkSelectedUserIds([]);
+        setIsAccessModalOpen(false);
+      } else {
+        toast.error("Bulk save failed");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to bulk save");
     }
   };
 
@@ -380,9 +404,25 @@ const UserMaster = () => {
       <div className="xl:col-span-8 bg-white rounded-xl border border-[#dce6f1] p-5 shadow-2xs">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#edf3f9]">
           <h2 className="text-[13px] font-bold text-[#0a1c30]">Existing Users</h2>
-          <div className="relative w-64">
-            <Input value={tableSearch} onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }} placeholder="Search users..." className="h-8 text-xs border-[#dce6f1] pl-8" />
-            <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5" />
+          <div className="flex items-center gap-3">
+            {bulkSelectedUserIds.length > 0 && (
+              <Button 
+                onClick={() => {
+                  setIsBulkMode(true);
+                  setSelectedWorkspaceIds([]);
+                  setSelectedReportIds([]);
+                  setSelectedDisplayViewIds([]);
+                  setIsAccessModalOpen(true);
+                }} 
+                className="h-8 text-xs bg-[#2f8fe0] hover:bg-[#1e5f99] text-white rounded-md"
+              >
+                Manage Access ({bulkSelectedUserIds.length})
+              </Button>
+            )}
+            <div className="relative w-64">
+              <Input value={tableSearch} onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }} placeholder="Search users..." className="h-8 text-xs border-[#dce6f1] pl-8" />
+              <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5" />
+            </div>
           </div>
         </div>
 
@@ -390,6 +430,20 @@ const UserMaster = () => {
           <Table className="text-xs">
             <TableHeader className="bg-[#edf4fa]">
               <TableRow className="border-[#dce6f1]">
+                <TableHead className="w-[40px] text-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300" 
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setBulkSelectedUserIds(paginatedUsers.map(u => u.userid || u.id));
+                      } else {
+                        setBulkSelectedUserIds([]);
+                      }
+                    }}
+                    checked={paginatedUsers.length > 0 && bulkSelectedUserIds.length === paginatedUsers.length}
+                  />
+                </TableHead>
                 <TableHead className="text-[10px] font-bold text-[#0a1c30]">FULL NAME</TableHead>
                 <TableHead className="text-[10px] font-bold text-[#0a1c30]">EMAIL</TableHead>
                 <TableHead className="text-[10px] font-bold text-[#0a1c30]">USER ROLES</TableHead>
@@ -409,6 +463,21 @@ const UserMaster = () => {
                   
                   return (
                     <TableRow key={u.id} className="border-[#dce6f1]">
+                      <TableCell className="text-center">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300"
+                          checked={bulkSelectedUserIds.includes(u.userid || u.id)}
+                          onChange={(e) => {
+                            const uid = u.userid || u.id;
+                            if (e.target.checked) {
+                              setBulkSelectedUserIds(prev => [...prev, uid]);
+                            } else {
+                              setBulkSelectedUserIds(prev => prev.filter(id => id !== uid));
+                            }
+                          }}
+                        />
+                      </TableCell>
                       <TableCell className="font-semibold text-[#0f2b48]">{u.name}</TableCell>
                       <TableCell className="text-[#5c7f9f]">{u.email}</TableCell>
                       <TableCell>
@@ -519,7 +588,7 @@ const UserMaster = () => {
                                                           {/* Default View Checkbox */}
                                                           <label className="flex items-center gap-2 cursor-pointer group">
                                                              <input type="checkbox" checked={selectedDisplayViewIds.includes(0 - rpt.id)} onChange={() => handleToggleView(0 - rpt.id, true, rpt.id)} className="rounded border-gray-300 text-[#2f8fe0]" />
-                                                             <span className="text-[11.5px] text-[#0a1c30] group-hover:text-[#2f8fe0] font-semibold">Default View (Full Dataset)</span>
+                                                             <span className="text-[11.5px] text-[#0a1c30] group-hover:text-[#2f8fe0] font-semibold">{rpt.report_name}</span>
                                                           </label>
                                                           
                                                           {/* Specific Views */}
@@ -552,7 +621,13 @@ const UserMaster = () => {
 
           <DialogFooter className="p-4 border-t border-[#edf3f9] bg-[#f9fbff]">
             <Button variant="outline" onClick={() => setIsAccessModalOpen(false)} className="text-xs h-8">Cancel</Button>
-            <Button onClick={() => submitUserToBackend(form.getValues(), selectedWorkspaceIds, selectedReportIds, selectedDisplayViewIds.filter(id => id > 0))} className="bg-[#0e2947] hover:bg-[#163e6b] text-white text-xs h-8 px-6 font-semibold">Finished</Button>
+            <Button onClick={() => {
+              if (isBulkMode) {
+                submitBulkToBackend(selectedWorkspaceIds, selectedReportIds, selectedDisplayViewIds.filter(id => id > 0));
+              } else {
+                submitUserToBackend(form.getValues(), selectedWorkspaceIds, selectedReportIds, selectedDisplayViewIds.filter(id => id > 0));
+              }
+            }} className="bg-[#0e2947] hover:bg-[#163e6b] text-white text-xs h-8 px-6 font-semibold">Finished</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

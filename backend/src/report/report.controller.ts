@@ -53,4 +53,16 @@ export class ReportController {
   deleteDisplayView(@Param('id') id: number) {
     return this.reportService.deleteDisplayView(+id);
   }
+
+  @Public()
+  @Post(':id/assign-users')
+  assignUsersToReport(@Param('id') id: number, @Body() data: { userIds: number[] }) {
+    return this.reportService.assignUsersToReport(+id, data.userIds);
+  }
+
+  @Public()
+  @Post('display-view/:id/assign-users')
+  assignUsersToDisplayView(@Param('id') id: number, @Body() data: { userIds: number[] }) {
+    return this.reportService.assignUsersToDisplayView(+id, data.userIds);
+  }
 }

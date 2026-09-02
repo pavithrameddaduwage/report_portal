@@ -40,6 +40,16 @@ export const deleteUser = async (id: number): Promise<any> => {
   }
 };
 
+export const bulkAllocateUsers = async (data: { userIds: number[]; workspaceIds: number[]; reportIds: number[]; displayviewIds: number[] }): Promise<any> => {
+  try {
+    const response = await apiClient.post(`/users/bulk-access`, data);
+    return response;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
 // --- Role Master APIs ---
 export const findAllRoles = async (): Promise<any> => {
   try {

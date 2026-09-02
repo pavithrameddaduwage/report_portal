@@ -38,5 +38,9 @@ export class WorkspaceController {
     return this.workspaceService.deleteWorkspace(+id)
   }
 
-
+  @Public()
+  @Post(':id/assign-users')
+  assignUsers(@Param('id') id: number, @Body() data: { userIds: number[] }) {
+    return this.workspaceService.assignUsers(+id, data.userIds);
+  }
 }

@@ -89,11 +89,11 @@ export class WorkspaceService implements OnModuleInit {
 
 
     async findAllWorkspaces() {
-        return this.workspaceRepository.find({ relations: ['reports'] });
+        return this.workspaceRepository.find({ relations: ['reports', 'users'] });
     }
 
     findWorkspaceById(id: any) {
-        return this.workspaceRepository.findOne({ where: { id: id }, relations: ['reports'] });
+        return this.workspaceRepository.findOne({ where: { id: id }, relations: ['reports', 'users'] });
     }
 
     async createWorkspace(workspace: any) {
@@ -125,6 +125,15 @@ export class WorkspaceService implements OnModuleInit {
 
     deleteWorkspace(workspaceid: any) {
         return this.workspaceRepository.delete({ id: workspaceid });
+    }
+
+    async assignUsers(id: number, userIds: number[]) {
+        const workspace = await this.workspaceRepository.findOne({ where: { id } });
+        if (!workspace) throw new Error('Workspace not found');
+        
+        workspace.users = userIds.map((userId) => ({ id: userId }) as any);
+        await this.workspaceRepository.save(workspace);
+        return { success: true, message: `Assigned ${userIds.length} users to workspace.` };
     }
 }
 

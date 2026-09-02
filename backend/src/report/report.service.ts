@@ -17,11 +17,11 @@ export class ReportService {
     ){}
 
     findAllReports(){
-        return this.reportRepository.find({relations:['workspace','columns','display_view_names']})
+        return this.reportRepository.find({relations:['workspace','columns','display_view_names','users']})
     }
 
     findReportsByWorkspaceId(workspaceid:number){
-        return this.reportRepository.find({where:{workspace:{id:workspaceid}},relations:['columns']})
+        return this.reportRepository.find({where:{workspace:{id:workspaceid}},relations:['columns','users']})
     }
 
     createReport(data:any){
@@ -103,7 +103,7 @@ export class ReportService {
     }
 
   findAllDisplayViews(){
-    return this.displayviewRepository.find({relations:['report','report.workspace']})
+    return this.displayviewRepository.find({relations:['report','report.workspace','displayview_columns','users']})
   }
 
   findDisplayViewByReportId(reportId:number){
@@ -123,6 +123,24 @@ export class ReportService {
     dv.users = [];
     await this.displayviewRepository.save(dv);
     return this.displayviewRepository.remove(dv);
+  }
+
+  async assignUsersToReport(id: number, userIds: number[]) {
+      const report = await this.reportRepository.findOne({ where: { id } });
+      if (!report) throw new NotFoundException('Report not found');
+      
+      report.users = userIds.map((userId) => ({ id: userId }) as any);
+      await this.reportRepository.save(report);
+      return { success: true, message: `Assigned ${userIds.length} users to report.` };
+  }
+
+  async assignUsersToDisplayView(id: number, userIds: number[]) {
+      const view = await this.displayviewRepository.findOne({ where: { id } });
+      if (!view) throw new NotFoundException('Display view not found');
+      
+      view.users = userIds.map((userId) => ({ id: userId }) as any);
+      await this.displayviewRepository.save(view);
+      return { success: true, message: `Assigned ${userIds.length} users to display view.` };
   }
 }
 

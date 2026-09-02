@@ -30,6 +30,27 @@ export class UsersService implements OnModuleInit {
 
   async onModuleInit() {
     await this.seedDefaultRolesAndPermissions();
+    await this.seedAdminUser();
+  }
+
+  async seedAdminUser() {
+    try {
+      const adminUser = await this.userRepository.findOne({
+        where: { email: 'admin@hgusa.com' }
+      });
+      if (!adminUser) {
+        console.log('[Bootstrap] Creating default admin user in DB...');
+        const user = new User();
+        user.name = 'Admin';
+        user.email = 'admin@hgusa.com';
+        user.is_admin = true;
+        user.role = 'Admin';
+        await this.userRepository.save(user);
+        console.log('[Bootstrap] Default admin user created successfully.');
+      }
+    } catch (err) {
+      console.warn('[Bootstrap] Admin user seeding notice:', err?.message);
+    }
   }
 
   async seedDefaultRolesAndPermissions() {
@@ -230,6 +251,25 @@ export class UsersService implements OnModuleInit {
       console.error('Error fetching roles from DB:', e?.message);
       return [];
     }
+  }
+
+  async bulkAllocateUsers(data: { userIds: number[]; workspaceIds: number[]; reportIds: number[]; displayviewIds: number[] }) {
+    if (!data.userIds || data.userIds.length === 0) return { success: true, message: 'No users provided' };
+
+    const users = await this.userRepository.findByIds(data.userIds);
+    
+    let reports: Report[] = (data.reportIds || []).map(id => ({ id: Number(id) } as Report));
+    let workspaces: Workspace[] = (data.workspaceIds || []).map(id => ({ id: Number(id) } as Workspace));
+    let displayviews: DisplayView[] = (data.displayviewIds || []).map(id => ({ id: Number(id) } as DisplayView));
+
+    for (const user of users) {
+      user.reports = reports;
+      user.workspaces = workspaces;
+      user.displayviews = displayviews;
+      await this.userRepository.save(user);
+    }
+    
+    return { success: true, message: `Successfully updated ${users.length} users` };
   }
 
   async createRole(data: { id?: number; role: string; permissions?: string[] }) {

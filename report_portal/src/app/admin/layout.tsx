@@ -8,7 +8,7 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes("report_configuration")) return "Report configuration";
   if (pathname.includes("display_view")) return "Display view configuration";
   if (pathname.includes("workspace_master")) return "Workspace management";
-  if (pathname.includes("user_management")) return "User management";
+  if (pathname.includes("user_management")) return "User & Access Management";
   if (pathname.includes("report_scheduler")) return "Report Scheduler & Email Dispatcher";
   if (pathname.includes("roles")) return "Roles & permissions";
   return "Admin Panel";

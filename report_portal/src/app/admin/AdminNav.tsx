@@ -60,7 +60,7 @@ export function AdminNav() {
           {permissions.canManageUsers && (
             <NavigationMenuItem>
               <NavigationMenuLink asChild className={navLinkStyle}>
-                <Link href="/admin/user_management">Users</Link>
+                <Link href="/admin/user_management">User & Access Management</Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
           )}

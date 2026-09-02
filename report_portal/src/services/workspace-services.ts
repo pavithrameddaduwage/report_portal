@@ -36,3 +36,12 @@ export const findWorkspaceById = async (id: number): Promise<any> => {
     throw error;
   }
 };
+
+export const assignUsersToWorkspace = async (id: number, userIds: number[]): Promise<any> => {
+  try {
+    const response = await apiClient.post(`/workspace/${id}/assign-users`, { userIds });
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};

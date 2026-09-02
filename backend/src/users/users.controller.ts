@@ -25,6 +25,11 @@ export class UsersController {
     return this.usersService.deleteUser(id);
   }
 
+  @Post('bulk-access')
+  bulkAllocateUsers(@Body() data: { userIds: number[]; workspaceIds: number[]; reportIds: number[]; displayviewIds: number[] }) {
+    return this.usersService.bulkAllocateUsers(data);
+  }
+
   @Get('findAllRoles')
   findAllRoles() {
     return this.usersService.findAllRoles();
