@@ -61,4 +61,14 @@ export class SchedulerController {
   getStats() {
     return this.schedulerService.getStats();
   }
+
+  @Post('test-email')
+  testEmail(@Body() data: { to: string }) {
+    return this.schedulerService.testEmail(data.to || 'mis@hgusa.com');
+  }
+
+  @Get('verify-smtp')
+  verifySmtp() {
+    return this.schedulerService.verifySmtp();
+  }
 }

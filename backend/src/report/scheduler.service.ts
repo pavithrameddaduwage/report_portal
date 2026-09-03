@@ -443,4 +443,12 @@ export class SchedulerService implements OnModuleInit {
         return `${minute} ${hour} * * *`;
     }
   }
+
+  async testEmail(toEmail: string) {
+    return this.mailService.sendTestEmail(toEmail);
+  }
+
+  async verifySmtp() {
+    return this.mailService.verifyConnection();
+  }
 }

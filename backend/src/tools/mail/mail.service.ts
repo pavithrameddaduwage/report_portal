@@ -1,23 +1,74 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
+  private readonly logger = new Logger(MailService.name);
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false, // TLS
+  private getTransporter(): nodemailer.Transporter {
+    const host = process.env.SMTP_HOST || 'mail.smtp2go.com';
+    const port = Number(process.env.SMTP_PORT) || 2525;
+    const isSecure =
+      process.env.SMTP_SECURE !== undefined
+        ? process.env.SMTP_SECURE === 'true'
+        : port === 465 || port === 8465;
+
+    const user = process.env.SMTP_USER || 'mis@hgusa.com';
+    const pass = process.env.SMTP_PASS || '';
+
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure: isSecure,
       auth: {
-        user: process.env.SMTP_USER || 'pavithrameddaduwage@gmail.com',
-        pass: process.env.SMTP_PASS || 'lhcf forc zrkc jouh',
+        user,
+        pass,
       },
       tls: {
         rejectUnauthorized: false,
       },
     });
+  }
+
+  async verifyConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const transporter = this.getTransporter();
+      await transporter.verify();
+      return { success: true, message: 'SMTP connection verified successfully.' };
+    } catch (error: any) {
+      this.logger.error(`SMTP Verification Failed: ${error.message}`, error.stack);
+      return { success: false, message: error.message || 'SMTP Connection failed.' };
+    }
+  }
+
+  async sendTestEmail(toEmail: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const transporter = this.getTransporter();
+      const fromAddress =
+        process.env.SMTP_FROM ||
+        '"Horizon Report Portal" <mis@hgusa.com>';
+
+      const info = await transporter.sendMail({
+        from: fromAddress,
+        to: toEmail,
+        subject: '[Report Portal] SMTP Test Email',
+        text: 'This is a test email sent from Horizon Report Portal to verify SMTP configuration.',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>SMTP Configuration Test Successful!</h2>
+            <p>This email confirms that your SMTP server (${process.env.SMTP_HOST || 'mail.smtp2go.com'}) is properly configured and functioning in Horizon Report Portal.</p>
+            <p><strong>Sent To:</strong> ${toEmail}</p>
+            <p><strong>Sent At:</strong> ${new Date().toUTCString()}</p>
+          </div>
+        `,
+      });
+
+      this.logger.log(`Test email sent successfully to ${toEmail}. Message ID: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+      this.logger.error(`Failed to send test email: ${error.message}`, error.stack);
+      return { success: false, error: error.message };
+    }
   }
 
   async sendReportEmail(options: {
@@ -45,7 +96,7 @@ export class MailService {
 
     const fromAddress =
       process.env.SMTP_FROM ||
-      '"Pavithra Meddaduwage (Power BI Portal)" <pavithrameddaduwage@gmail.com>';
+      '"Horizon Report Portal" <mis@hgusa.com>';
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -121,7 +172,6 @@ export class MailService {
 </html>
     `;
 
-
     const mailOptions: nodemailer.SendMailOptions = {
       from: fromAddress,
       to: to.join(', '),
@@ -136,9 +186,10 @@ export class MailService {
       ],
     };
 
-    console.log(`[MailService] Sending report email "${mailOptions.subject}" to:`, to);
-    const info = await this.transporter.sendMail(mailOptions);
-    console.log(`[MailService] Email successfully sent! Message ID:`, info.messageId);
+    this.logger.log(`Sending report email "${mailOptions.subject}" to: ${to.join(', ')}`);
+    const transporter = this.getTransporter();
+    const info = await transporter.sendMail(mailOptions);
+    this.logger.log(`Email successfully sent! Message ID: ${info.messageId}`);
     return { messageId: info.messageId };
   }
 }
