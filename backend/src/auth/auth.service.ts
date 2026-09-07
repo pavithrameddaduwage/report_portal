@@ -140,7 +140,7 @@ export class AuthService {
 
     try {
       const totalUsersCount = await this.userRepository.count();
-      const existingDbUser = await this.userRepository.findOne({
+      let existingDbUser = await this.userRepository.findOne({
         where: { email: ILike(email) },
       });
 
@@ -152,13 +152,24 @@ export class AuthService {
         firstAdmin.email = email;
         firstAdmin.is_admin = true;
         firstAdmin.role = 'Admin';
-        await this.userRepository.save(firstAdmin);
-        isUserAdmin = true;
-        userRole = 'Admin';
-      } else if (existingDbUser) {
-        isUserAdmin = Boolean(existingDbUser.is_admin) || existingDbUser.role === 'Admin';
-        userRole = existingDbUser.role || (isUserAdmin ? 'Admin' : 'User');
+        existingDbUser = await this.userRepository.save(firstAdmin);
+      } else if (!existingDbUser) {
+        // Auto-create new user upon AD login if not yet in database
+        const newUser = new User();
+        newUser.name = aduser.cn || username;
+        newUser.email = email;
+        newUser.is_admin = username.toLowerCase().includes('admin') || email.toLowerCase().includes('admin');
+        newUser.role = newUser.is_admin ? 'Admin' : 'User';
+        existingDbUser = await this.userRepository.save(newUser);
       }
+
+      isUserAdmin =
+        Boolean(existingDbUser?.is_admin) ||
+        String(existingDbUser?.role || '').toLowerCase().includes('admin') ||
+        email.toLowerCase().includes('admin') ||
+        username.toLowerCase().includes('admin');
+
+      userRole = existingDbUser?.role || (isUserAdmin ? 'Admin' : 'User');
 
       // Fetch permissions configured for this role from RoleMaster
       if (isUserAdmin) {

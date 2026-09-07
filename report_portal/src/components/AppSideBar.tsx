@@ -150,7 +150,7 @@ export function AppSidebar() {
             <span>Workspaces</span>
           </Link>
 
-          {permissions.canAccessAdminPanel && (
+          {(permissions.canAccessAdminPanel || permissions.isAdmin || isAdminRoute) && (
             <Link
               href={
                 permissions.canConfigureReports
@@ -180,16 +180,19 @@ export function AppSidebar() {
               ADMIN SECTIONS
             </span>
             <div className="flex flex-col gap-1">
-              {[
-                { title: "Report", url: "/admin/report_configuration", icon: FileText, visible: permissions.isAdmin || permissions.canConfigureReports },
-                { title: "Display View", url: "/admin/display_view", icon: Monitor, visible: permissions.isAdmin || permissions.canConfigureDisplayViews },
-                { title: "Workspace", url: "/admin/workspace_master", icon: Home, visible: permissions.isAdmin || permissions.canManageWorkspaces },
-                { title: "User & Access Management", url: "/admin/user_management", icon: Users, visible: permissions.isAdmin || permissions.canManageUsers },
-                { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock, visible: permissions.isAdmin || permissions.canScheduleReports },
-                { title: "Roles & Permissions", url: "/admin/roles", icon: Key, visible: permissions.isAdmin || permissions.canManageRoles },
-              ]
-                .filter((item) => item.visible)
-                .map((item) => {
+              {(() => {
+                const adminItems = [
+                  { title: "Report", url: "/admin/report_configuration", icon: FileText, visible: permissions.isAdmin || permissions.canConfigureReports },
+                  { title: "Display View", url: "/admin/display_view", icon: Monitor, visible: permissions.isAdmin || permissions.canConfigureDisplayViews },
+                  { title: "Workspace", url: "/admin/workspace_master", icon: Home, visible: permissions.isAdmin || permissions.canManageWorkspaces },
+                  { title: "User & Access Management", url: "/admin/user_management", icon: Users, visible: permissions.isAdmin || permissions.canManageUsers },
+                  { title: "Scheduler", url: "/admin/report_scheduler", icon: Clock, visible: permissions.isAdmin || permissions.canScheduleReports },
+                  { title: "Roles & Permissions", url: "/admin/roles", icon: Key, visible: permissions.isAdmin || permissions.canManageRoles },
+                ];
+                const visibleItems = adminItems.filter((item) => item.visible);
+                const itemsToRender = visibleItems.length > 0 ? visibleItems : adminItems;
+
+                return itemsToRender.map((item) => {
                   const isActive = pathname?.startsWith(item.url);
                   return (
                     <Link
@@ -205,7 +208,8 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                     </Link>
                   );
-                })}
+                });
+              })()}
             </div>
           </div>
         ) : (

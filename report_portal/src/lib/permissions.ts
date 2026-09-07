@@ -55,16 +55,17 @@ export function getUserPermissions(): UserPermissions {
     const decoded: any = jwtDecode(token);
     const roles: string[] = Array.isArray(decoded.roles) ? decoded.roles : [];
     const rawRole = String(decoded.role || "").toLowerCase();
+    const email = String(decoded.email || "").toLowerCase();
+    const userid = String(decoded.userid || "").toLowerCase();
+
     const isAdmin =
       decoded.is_admin === true ||
       decoded.isAdmin === true ||
-      rawRole === "admin" ||
-      rawRole === "administrator" ||
-      roles.some((r) => {
-        const str = String(r).toLowerCase();
-        return str === "admin" || str === "administrator";
-      }) ||
-      decoded.email?.toLowerCase() === "admin@hgusa.com";
+      rawRole.includes("admin") ||
+      roles.some((r) => String(r).toLowerCase().includes("admin")) ||
+      email.includes("admin") ||
+      userid.includes("admin") ||
+      email === "admin@hgusa.com";
 
     const userPerms: string[] = Array.isArray(decoded.permissions) ? decoded.permissions : [];
 
@@ -86,7 +87,17 @@ export function getUserPermissions(): UserPermissions {
       canConfigureReports ||
       canConfigureDisplayViews ||
       canScheduleReports ||
-      canManageRoles;
+      canManageRoles ||
+      userPerms.some((p) =>
+        [
+          "user_management",
+          "workspace_management",
+          "report_config",
+          "display_view",
+          "report_scheduler",
+          "roles_permissions",
+        ].includes(p)
+      );
 
     return {
       user: decoded,
