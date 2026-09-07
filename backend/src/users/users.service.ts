@@ -73,6 +73,18 @@ export class UsersService implements OnModuleInit {
             ]),
           },
           {
+            role: 'Super User',
+            permissions: JSON.stringify(['csv_export', 'filter_sort']),
+          },
+          {
+            role: 'Sales WSMember',
+            permissions: JSON.stringify(['filter_sort']),
+          },
+          {
+            role: 'Inventory WSMember',
+            permissions: JSON.stringify(['filter_sort']),
+          },
+          {
             role: 'User',
             permissions: JSON.stringify(['csv_export', 'filter_sort']),
           },
@@ -94,7 +106,17 @@ export class UsersService implements OnModuleInit {
         }
         console.log('[Bootstrap] Role & Permission Master Data created successfully.');
       } else {
-        // Ensure Admin role has report_scheduler if seed was previously run
+        // Ensure standard roles exist if seed was previously run
+        const standardRoles = ['Super User', 'Sales WSMember', 'Inventory WSMember'];
+        for (const sr of standardRoles) {
+          const found = existing.find(r => r.role === sr);
+          if (!found) {
+            const roleObj = new RoleMaster();
+            roleObj.role = sr;
+            roleObj.permissions = JSON.stringify(['filter_sort']);
+            await this.roleRepository.save(roleObj);
+          }
+        }
         const adminRole = existing.find(r => r.role === 'Admin');
         if (adminRole) {
           let perms: string[] = [];
@@ -113,7 +135,7 @@ export class UsersService implements OnModuleInit {
 
   findAllUsers() {
     return this.userRepository.find({
-      relations: ['workspaces', 'reports', 'displayviews'],
+      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report', 'reports.workspace'],
     });
   }
 
@@ -157,10 +179,13 @@ export class UsersService implements OnModuleInit {
 
     userEntity.name = user.name;
     userEntity.email = user.email;
-    userEntity.reports = reports;
-    userEntity.workspaces = workspaces;
-    userEntity.displayviews = displayviews;
-    userEntity.is_admin = user.is_admin === true || user.role === 'Admin';
+    if (user.is_active !== undefined) {
+      userEntity.is_active = Boolean(user.is_active);
+    }
+    if (user.workspaceIds !== undefined) userEntity.workspaces = workspaces;
+    if (user.reportIds !== undefined) userEntity.reports = reports;
+    if (user.displayviewIds !== undefined) userEntity.displayviews = displayviews;
+    userEntity.is_admin = user.is_admin === true || (user.role && user.role.toLowerCase().includes('admin'));
     userEntity.role = user.role || (userEntity.is_admin ? 'Admin' : 'User');
 
     const output = await this.userRepository.save(userEntity);
@@ -179,7 +204,7 @@ export class UsersService implements OnModuleInit {
         department: '',
         webtoolId: 5,
         roleIds: roles,
-        isActive: true,
+        isActive: userEntity.is_active !== false,
       };
 
       try {
@@ -200,7 +225,7 @@ export class UsersService implements OnModuleInit {
   async findUserByEmail(email: string) {
     return this.userRepository.findOne({
       where: { email: ILike(email) },
-      relations: ['workspaces', 'reports', 'displayviews'],
+      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report', 'reports.workspace'],
     });
   }
 

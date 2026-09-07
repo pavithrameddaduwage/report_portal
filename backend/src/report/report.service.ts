@@ -24,7 +24,7 @@ export class ReportService {
         return this.reportRepository.find({where:{workspace:{id:workspaceid}},relations:['columns','users']})
     }
 
-    createReport(data:any){
+    async createReport(data:any){
         const report=new Report()
         report.report_name=data.report_name
         report.report_view=data.report_view
@@ -35,7 +35,24 @@ export class ReportService {
         if (!report.id || report.id==null ||report.id==0){
             delete report.id
         }
-    return this.reportRepository.save(report)
+        const saved = await this.reportRepository.save(report);
+
+        try {
+          const existingDv = await this.displayviewRepository.findOne({
+            where: { report: { id: saved.id }, displayview_name: saved.report_name }
+          });
+          if (!existingDv) {
+            const dv = new DisplayView();
+            dv.displayview_name = saved.report_name;
+            dv.report = saved;
+            dv.displayview_columns = [];
+            await this.displayviewRepository.save(dv);
+          }
+        } catch (e) {
+          console.warn("Notice ensuring default display view:", e?.message);
+        }
+
+        return saved;
     }
 
    async deleteReport(id:number){

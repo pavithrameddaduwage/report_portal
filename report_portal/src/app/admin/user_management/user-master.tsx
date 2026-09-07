@@ -52,6 +52,7 @@ const UserMaster = () => {
   
   // Custom multi-select roles state
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [isActive, setIsActive] = useState<boolean>(true);
 
   const form = useForm<any>({
     resolver: zodResolver(userSchema),
@@ -157,6 +158,7 @@ const UserMaster = () => {
         email: data.email.trim(),
         role: data.role, // Comma separated string
         is_admin: isAdm,
+        is_active: isActive,
         workspaceIds: isAdm ? [] : wsIds,
         reportIds: isAdm ? [] : rptIds,
         displayviewIds: isAdm ? [] : dvIds,
@@ -202,6 +204,7 @@ const UserMaster = () => {
     setSelectedUser(u);
     const rolesArray = (u.role || (u.is_admin ? "Admin" : "")).split(",").filter((r:string) => r.trim() !== "");
     setSelectedRoles(rolesArray);
+    setIsActive(u.is_active !== false);
     
     form.reset({
       email: u.email || "",
@@ -221,6 +224,7 @@ const UserMaster = () => {
   const handleCancel = () => {
     setSelectedUser(null);
     setSelectedRoles([]);
+    setIsActive(true);
     form.reset({ email: "", name: "", role: "" });
     setSelectedWorkspaceIds([]);
     setSelectedReportIds([]);
@@ -386,8 +390,14 @@ const UserMaster = () => {
             )} />
 
             <div className="flex items-center gap-2 pt-2">
-               <input type="checkbox" id="isActive" defaultChecked className="rounded border-gray-300 text-[#2f8fe0] focus:ring-[#2f8fe0]" />
-               <label htmlFor="isActive" className="text-[12px] font-bold text-[#0d2745]">Is Active</label>
+               <input 
+                 type="checkbox" 
+                 id="isActive" 
+                 checked={isActive} 
+                 onChange={(e) => setIsActive(e.target.checked)} 
+                 className="rounded border-gray-300 text-[#2f8fe0] focus:ring-[#2f8fe0] w-4 h-4 cursor-pointer" 
+               />
+               <label htmlFor="isActive" className="text-[12px] font-bold text-[#0d2745] cursor-pointer">Is Active</label>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3f9]">

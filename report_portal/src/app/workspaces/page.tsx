@@ -49,31 +49,46 @@ export default function WorkspacesPage() {
         userDb = userRes.value.data;
       }
 
-      const isAdmin =
-        isAdminToken ||
-        userDb?.is_admin === true ||
-        String(userDb?.role || "").toLowerCase() === "admin";
-
       let rawWorkspaces: any[] = [];
       if (wsRes.status === "fulfilled" && wsRes.value?.status === 200) {
         rawWorkspaces = wsRes.value.data || [];
       }
 
+      const userRoles: string[] = (userDb?.role ? userDb.role.split(',') : [rawRole]).map((r: string) => r.trim().toLowerCase());
+      const isAdmin =
+        isAdminToken ||
+        userDb?.is_admin === true ||
+        userRoles.some((r: string) => r === "admin" || r === "administrator");
+
+      const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
+
       const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => ws.id) : [];
       const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => rpt.id) : [];
+      const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => dv.report?.id || dv.reportId).filter(Boolean) : [];
 
-      const finalworkspaces = rawWorkspaces.map((ws: any) => {
-        const isWsAuth = isAdmin || workspaceids.includes(ws.id);
-        const reports = (ws.reports || []).map((rpt: any) => ({
-          ...rpt,
-          authorized: isAdmin || isWsAuth || reportids.includes(rpt.id),
-        }));
-        return {
-          ...ws,
-          authorized: isWsAuth || reports.some((r: any) => r.authorized),
-          reports,
-        };
-      });
+      const finalworkspaces = rawWorkspaces
+        .map((ws: any) => {
+          const wsNameLower = String(ws.name || "").toLowerCase();
+          const isWsMemberByRole = userRoles.some((r: string) => r.includes(wsNameLower) || r === `${wsNameLower} wsmember`);
+          
+          const isWsAuth = isAdmin || isSuperUser || isWsMemberByRole || workspaceids.includes(ws.id);
+          const authorizedReports = (ws.reports || [])
+            .map((rpt: any) => {
+              const isRptAuth = isWsAuth || reportids.includes(rpt.id) || displayviewReportids.includes(rpt.id);
+              return {
+                ...rpt,
+                authorized: isRptAuth,
+              };
+            })
+            .filter((rpt: any) => rpt.authorized);
+
+          return {
+            ...ws,
+            authorized: isWsAuth || authorizedReports.length > 0,
+            reports: authorizedReports,
+          };
+        })
+        .filter((ws: any) => ws.authorized);
 
       setWorkspaces(finalworkspaces);
       setDisplayWorkspaces(finalworkspaces);
