@@ -22,11 +22,7 @@ export class WorkspaceService implements OnModuleInit {
     ) {}
 
     async onModuleInit() {
-        try {
-            await this.cleanupDummyData();
-        } catch (e) {
-            this.logger.warn(`Dummy cleanup notice: ${e?.message}`);
-        }
+        // Module initialized without blocking database table cleanup
     }
 
     async cleanupDummyData() {

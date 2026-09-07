@@ -170,9 +170,23 @@ const ReportConfiguration = () => {
   );
 
   useEffect(() => {
-    fetchReports();
-    fetchWorkspaces();
+    fetchInitialData();
   }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      const [rptRes, wsRes] = await Promise.all([
+        findAllReports().catch(() => ({ status: 500, data: [] })),
+        findAllWorkspaces().catch(() => ({ status: 500, data: [] })),
+      ]);
+      if (rptRes.status === 200 || rptRes.data) setReports(rptRes.data || []);
+      if (wsRes.status === 200 || wsRes.data) {
+        setWorkspaces((wsRes.data || []).map((ws: any) => ({ value: ws.id, label: ws.name })));
+      }
+    } catch (error) {
+      console.error("Error loading report config data:", error);
+    }
+  };
 
   const fetchWorkspaces = async () => {
     try {

@@ -19,9 +19,9 @@ const config = {
     tlsOptions: {
       rejectUnauthorized: false,
     },
-    timeout: 30000,  
-    reconnect: true,
-    connectTimeout: 30000,
+    timeout: 3000,  
+    reconnect: false,
+    connectTimeout: 3000,
 };
 const ad = new ActiveDirectory(config);
 

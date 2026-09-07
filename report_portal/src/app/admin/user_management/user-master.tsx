@@ -60,26 +60,25 @@ const UserMaster = () => {
   });
 
   useEffect(() => {
-    fetchUsers();
-    fetchWorkspaces();
-    fetchRoles();
-    fetchDisplayViews();
+    fetchAllData();
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Sync custom selectedRoles with form role string
-  useEffect(() => {
-    form.setValue("role", selectedRoles.join(","), { shouldValidate: !!selectedRoles.length });
-  }, [selectedRoles, form]);
+  const fetchAllData = async () => {
+    try {
+      const [uRes, wsRes, rRes, dvRes] = await Promise.all([
+        findAllusers().catch(() => ({ status: 500, data: [] })),
+        findAllWorkspaces().catch(() => ({ status: 500, data: [] })),
+        findAllRoles().catch(() => ({ status: 500, data: [] })),
+        findAllDisplayViews().catch(() => ({ status: 500, data: [] })),
+      ]);
+      if (uRes.status === 200 || uRes.data) setUsers(uRes.data || []);
+      if (wsRes.status === 200 || wsRes.data) setRawWorkspaces(wsRes.data || []);
+      if (rRes.status === 200 || rRes.data) setRolesList(rRes.data || []);
+      if (dvRes.status === 200 || dvRes.data) setAllDisplayViews(dvRes.data || []);
+    } catch (error) {
+      console.error("Failed to load initial user management data:", error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -92,20 +91,6 @@ const UserMaster = () => {
     try {
       const res = await findAllWorkspaces();
       if (res.status === 200) setRawWorkspaces(res.data || []);
-    } catch (error) { console.error(error); }
-  };
-
-  const fetchRoles = async () => {
-    try {
-      const res = await findAllRoles();
-      if (res.status === 200) setRolesList(res.data || []);
-    } catch (error) { console.error(error); }
-  };
-  
-  const fetchDisplayViews = async () => {
-    try {
-      const res = await findAllDisplayViews();
-      if (res.status === 200) setAllDisplayViews(res.data || []);
     } catch (error) { console.error(error); }
   };
 
