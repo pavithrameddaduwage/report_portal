@@ -1,14 +1,22 @@
 import axios from 'axios';
-import { baseUrl } from './baseUrl';
+import { getBaseUrl } from './baseUrl';
 
-const API_URL = process.env.INTEGRATION_API_URL || baseUrl;
+const getApiUrl = () => {
+  if (typeof process !== 'undefined' && process.env) {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    if (process.env.NEXT_PUBLIC_INTEGRATION_API_URL) return process.env.NEXT_PUBLIC_INTEGRATION_API_URL;
+    if (process.env.INTEGRATION_API_URL) return process.env.INTEGRATION_API_URL;
+  }
+  return getBaseUrl();
+};
 
-export const apiClient = axios.create({
-  baseURL: API_URL,
-});
+export const apiClient = axios.create();
 
 apiClient.interceptors.request.use(
   (config) => {
+    if (!config.baseURL) {
+      config.baseURL = getApiUrl();
+    }
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('access_token');
       if (token) {

@@ -109,8 +109,26 @@ const UserMaster = () => {
     } catch (error) { console.error(error); }
   };
 
+  const formatNameFromEmail = (emailStr: string) => {
+    if (!emailStr) return "";
+    const prefix = emailStr.split("@")[0] || "";
+    if (!prefix) return "";
+    return prefix
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   const handleEmailChange = (val: string, fieldChange: (val: string) => void) => {
     fieldChange(val);
+
+    // Auto-populate User Name from email if User Name hasn't been custom typed or matches previous auto-fill
+    const autoDerivedName = formatNameFromEmail(val);
+    if (autoDerivedName) {
+      form.setValue("name", autoDerivedName, { shouldValidate: true });
+    }
+
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (!val || val.trim().length < 1) {
       setAdSuggestions([]);
@@ -325,17 +343,19 @@ const UserMaster = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onProceedToPermissions)} className="space-y-4">
             
-            <FormField control={form.control} name="name" render={({ field }) => (
+            <FormField control={form.control} name="email" render={({ field }) => (
               <FormItem className="relative" ref={suggestionsRef}>
                 <FormLabel className="text-[12px] font-bold text-[#0d2745] flex items-center justify-between">
-                  <span>User Name</span>
+                  <span>Email</span>
                   {isSearchingAD && <span className="text-[11px] text-[#2f8fe0]"><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Searching AD</span>}
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} onChange={(e) => {
-                     field.onChange(e);
-                     handleEmailChange(e.target.value, () => {});
-                  }} placeholder="Start typing to search AD users..." className="h-8 text-xs border-[#dce6f1] rounded-md shadow-2xs focus-visible:ring-[#2f8fe0]" />
+                  <Input 
+                    {...field} 
+                    onChange={(e) => handleEmailChange(e.target.value, field.onChange)} 
+                    placeholder="Type user email (e.g. john.doe@hgusa.com)..." 
+                    className="h-8 text-xs border-[#dce6f1] rounded-md shadow-2xs focus-visible:ring-[#2f8fe0]" 
+                  />
                 </FormControl>
                 
                 {showSuggestions && adSuggestions.length > 0 && (
@@ -352,11 +372,11 @@ const UserMaster = () => {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="email" render={({ field }) => (
+            <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[12px] font-bold text-[#0d2745]">Email</FormLabel>
+                <FormLabel className="text-[12px] font-bold text-[#0d2745]">User Name</FormLabel>
                 <FormControl>
-                  <Input {...field} readOnly placeholder="Will be populated from AD" className="h-8 text-xs bg-[#f6f9fc] border-[#dce6f1] rounded-md shadow-2xs" />
+                  <Input {...field} placeholder="Auto-populated from email or AD" className="h-8 text-xs bg-[#f6f9fc] focus:bg-white border-[#dce6f1] rounded-md shadow-2xs" />
                 </FormControl>
                 <FormMessage className="text-[10px]" />
               </FormItem>
