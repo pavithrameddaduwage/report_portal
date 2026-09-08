@@ -517,8 +517,8 @@ const UserMaster = () => {
           </div>
         </div>
 
-        {/* Scrollable Table Container for 25+ rows with Sticky Header */}
-        <div className="overflow-y-auto max-h-[620px] overflow-x-auto w-full border border-[#dce6f1] rounded-lg shadow-2xs">
+        {/* Scrollable Table Container for ~15 rows with Sticky Header */}
+        <div className="overflow-y-auto max-h-[500px] overflow-x-auto w-full border border-[#dce6f1] rounded-lg shadow-2xs">
           <Table className="text-xs">
             <TableHeader className="bg-[#edf4fa] sticky top-0 z-10 shadow-2xs">
               <TableRow className="border-[#dce6f1] bg-[#edf4fa]">
