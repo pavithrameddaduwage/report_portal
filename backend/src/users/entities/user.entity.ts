@@ -1,7 +1,8 @@
 import { DisplayView } from "src/report/entities/displayview.entity";
 import { Report } from "src/report/entities/report.entity";
 import { Workspace } from "src/workspace/entities/workspace.entity";
-import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { UserRoles } from "./user_roles.entity";
 
 
 @Entity()
@@ -36,4 +37,7 @@ export class User{
     @ManyToMany(()=>DisplayView,dv=>dv.users)
     @JoinTable()
     displayviews:DisplayView[]
+
+    @OneToMany(()=>UserRoles, ur=>ur.user, {cascade: true})
+    user_roles:UserRoles[]
 }

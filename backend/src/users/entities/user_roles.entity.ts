@@ -7,8 +7,8 @@ export class UserRoles{
     @PrimaryGeneratedColumn()
     id:number
 
-    // @ManyToOne(()=>User,user=>user.user_roles)
-    // user:User
+    @ManyToOne(()=>User, user=>user.user_roles, { onDelete: 'CASCADE' })
+    user:User
 
     @ManyToOne(()=>RoleMaster,rolemaster=>rolemaster.user_roles)
     role:RoleMaster

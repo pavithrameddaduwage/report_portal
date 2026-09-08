@@ -31,6 +31,28 @@ export class UsersService implements OnModuleInit {
   async onModuleInit() {
     await this.seedDefaultRolesAndPermissions();
     await this.seedAdminUser();
+    await this.syncUserRolesTable();
+  }
+
+  async syncUserRolesTable() {
+    try {
+      const allUsers = await this.userRepository.find();
+      for (const u of allUsers) {
+        const roleNames = (u.role || '').split(',').map((r: string) => r.trim()).filter(Boolean);
+        await this.userrolesRepository.delete({ user: { id: u.id } as any });
+        for (const name of roleNames) {
+          const masterRole = await this.roleRepository.findOne({ where: { role: ILike(name) } });
+          if (masterRole) {
+            const ur = new UserRoles();
+            ur.user = u;
+            ur.role = masterRole;
+            await this.userrolesRepository.save(ur);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Initial user_roles sync notice:', e?.message);
+    }
   }
 
   async seedAdminUser() {
@@ -239,6 +261,22 @@ export class UsersService implements OnModuleInit {
         .relation(User, 'displayviews')
         .of(output.id)
         .addAndRemove(addDisplayviewIds, removeDisplayviewIds);
+    }
+
+    try {
+      await this.userrolesRepository.delete({ user: { id: output.id } as any });
+      const roleNames = (output.role || '').split(',').map((r: string) => r.trim()).filter(Boolean);
+      for (const name of roleNames) {
+        const masterRole = await this.roleRepository.findOne({ where: { role: ILike(name) } });
+        if (masterRole) {
+          const ur = new UserRoles();
+          ur.user = output;
+          ur.role = masterRole;
+          await this.userrolesRepository.save(ur);
+        }
+      }
+    } catch (e) {
+      console.warn('user_roles sync error:', e?.message);
     }
 
     let roles = [];
