@@ -250,8 +250,8 @@ export default function WorkspacesPage() {
                     </span>
                   </div>
 
-                  {/* Reports & Views List inside Card */}
-                  <div className="flex flex-col gap-2.5 my-1 min-h-[220px] max-h-[340px] overflow-y-auto pr-1">
+                  {/* Reports List inside Card (2 per row, clean layout without outlines/shadings) */}
+                  <div className="my-1 min-h-[250px] max-h-[380px] overflow-y-auto pr-1">
                     {authReports.length === 0 ? (
                       <div className="h-full flex items-center justify-center py-8">
                         <span className="text-[11px] text-[#8aa6bf] italic">
@@ -259,52 +259,20 @@ export default function WorkspacesPage() {
                         </span>
                       </div>
                     ) : (
-                      authReports.map((rep: any) => {
-                        const views = rep.views || rep.display_view_names || rep.displayviews || [];
-                        const isExpanded = expandedReports[rep.id] === true;
-
-                        return (
-                          <div key={rep.id} className="flex flex-col bg-[#f9fbff] border border-[#edf3f9] rounded-lg overflow-hidden transition-colors hover:border-[#bde0fe]">
-                            {/* Report Header Bar */}
-                            <div className="flex items-center justify-between p-2.5 bg-[#f6fafc]">
-                              <Link
-                                href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
-                                className="flex items-center gap-2 truncate group flex-1 min-w-0"
-                              >
-                                <FileText className="w-4 h-4 text-[#2f8fe0] shrink-0" />
-                                <span className="text-[13px] font-bold text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate">
-                                  {rep.report_name}
-                                </span>
-                              </Link>
-
-                              {views.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleReportExpand(rep.id)}
-                                  className="text-[11px] font-semibold text-[#1e5f99] bg-white border border-[#c8dced] px-2 py-0.5 rounded-md hover:bg-[#eaf4fd] transition-colors cursor-pointer shrink-0 ml-2 select-none"
-                                >
-                                  {isExpanded ? "Hide Views" : `${views.length} View${views.length === 1 ? "" : "s"}`}
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Views List (Collapsible, hidden by default) */}
-                            {isExpanded && views.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 p-2.5 bg-white border-t border-[#edf3f9]">
-                                {views.map((dv: any) => (
-                                  <Link
-                                    key={dv.id}
-                                    href={`/workspaces/${workspace.id}?reportId=${rep.id}&viewId=${dv.id}`}
-                                    className="inline-flex items-center text-[11px] font-medium text-[#335375] bg-[#f0f6fc] border border-[#dce6f1] px-2.5 py-1 rounded-md hover:bg-[#2f8fe0] hover:text-white transition-colors cursor-pointer"
-                                  >
-                                    <span>{dv.displayview_name}</span>
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                        {authReports.map((rep: any) => (
+                          <Link
+                            key={rep.id}
+                            href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
+                            className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-[#edf4fa] transition-colors group min-w-0"
+                          >
+                            <FileText className="w-4 h-4 text-[#2f8fe0] shrink-0" />
+                            <span className="text-[13px] font-semibold text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate" title={rep.report_name}>
+                              {rep.report_name}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

@@ -328,11 +328,8 @@ const UserMaster = () => {
      });
 
      const isExplicit = selectedWsSet.has(wsId);
-     const hasReportsSelected = wsReportIds.some((rId: number) => selectedRptSet.has(rId));
-     const hasViewsSelected = wsViewIds.some((vId: number) => selectedDvSet.has(vId));
-     const isCurrentlyActive = isExplicit || hasReportsSelected || hasViewsSelected;
 
-     if (isCurrentlyActive) {
+     if (isExplicit) {
         const wsRptSet = new Set(wsReportIds);
         const wsVSet = new Set(wsViewIds);
         setSelectedWorkspaceIds(prev => prev.filter((id: number) => id !== wsId));
@@ -349,9 +346,9 @@ const UserMaster = () => {
      const customDvs = displayViewsByReportId[rptId] || [];
      const rptViews = [0 - rptId, ...customDvs.map((dv: any) => dv.id)];
 
-     const isCurrentlyActive = selectedRptSet.has(rptId) || selectedWsSet.has(wsId);
+     const isRptExplicit = selectedRptSet.has(rptId);
 
-     if (isCurrentlyActive) {
+     if (isRptExplicit) {
         const rptVSet = new Set(rptViews);
         setSelectedReportIds(prev => prev.filter((id: number) => id !== rptId));
         setSelectedDisplayViewIds(prev => prev.filter((id: number) => !rptVSet.has(id)));
@@ -679,12 +676,8 @@ const UserMaster = () => {
                               ...allDisplayViews.filter((dv: any) => dv.report?.id === r.id).map((dv: any) => dv.id)
                             ]);
 
-                            const isWsExplicit = selectedWorkspaceIds.includes(ws.id);
-                            const hasAnyReportSelectedInWs = wsReportIds.some((rId: number) => selectedReportIds.includes(rId));
-                            const hasAnyViewSelectedInWs = wsAllViewIds.some((vId: number) => selectedDisplayViewIds.includes(vId));
-
-                            const isWsChecked = isWsExplicit;
-                            const isWsDisabled = hasAnyReportSelectedInWs || hasAnyViewSelectedInWs;
+                            const isWsChecked = selectedWsSet.has(ws.id);
+                            const isWsDisabled = false;
                             const isWsExpanded = expandedWorkspacesInModal[ws.id] === true;
 
                             return (
@@ -711,7 +704,7 @@ const UserMaster = () => {
                                                  checked={isWsChecked}
                                                  disabled={isWsDisabled}
                                                  onChange={() => handleToggleWorkspace(ws.id)}
-                                                 className="rounded border-[#c8dced] text-[#2f8fe0] disabled:opacity-80 cursor-pointer"
+                                                 className="rounded border-[#c8dced] text-[#2f8fe0] cursor-pointer"
                                               />
                                               <span className="font-bold text-[#0a1c30] text-[13px]">{ws.name}</span>
                                            </div>
@@ -759,19 +752,25 @@ const UserMaster = () => {
 
                                                           {/* Views Column */}
                                                           <div className="w-[35%] flex flex-col gap-1.5">
-                                                             {rptViews.map((v: any) => (
-                                                                <label key={v.id} className="flex items-center gap-2 cursor-pointer group py-0.5 select-none">
-                                                                   <input
-                                                                      type="checkbox"
-                                                                      checked={selectedDvSet.has(v.id)}
-                                                                      onChange={() => handleToggleView(v.id, rpt.id)}
-                                                                      className="rounded border-[#c8dced] text-[#2f8fe0] cursor-pointer"
-                                                                   />
-                                                                   <span className="text-[11px] font-medium text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate">
-                                                                      {v.name}
-                                                                   </span>
-                                                                </label>
-                                                             ))}
+                                                             {rptViews.map((v: any) => {
+                                                                const isViewChecked = isParentWsChecked || isRptChecked || selectedDvSet.has(v.id);
+                                                                const isViewDisabled = isParentWsChecked || isRptChecked;
+
+                                                                return (
+                                                                   <label key={v.id} className={`flex items-center gap-2 select-none py-0.5 ${isViewDisabled ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer group'}`}>
+                                                                      <input
+                                                                         type="checkbox"
+                                                                         checked={isViewChecked}
+                                                                         disabled={isViewDisabled}
+                                                                         onChange={() => handleToggleView(v.id, rpt.id)}
+                                                                         className="rounded border-[#c8dced] text-[#2f8fe0] disabled:opacity-80 cursor-pointer"
+                                                                      />
+                                                                      <span className={`text-[11px] font-medium text-[#0a1c30] truncate ${!isViewDisabled ? 'group-hover:text-[#2f8fe0] transition-colors' : ''}`}>
+                                                                         {v.name}
+                                                                      </span>
+                                                                   </label>
+                                                                );
+                                                             })}
                                                           </div>
                                                        </div>
                                                     );
