@@ -14,6 +14,11 @@ export default function WorkspacesPage() {
   const [displayworkspaces, setDisplayWorkspaces] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState<boolean>(true);
+  const [expandedReports, setExpandedReports] = useState<Record<number, boolean>>({});
+
+  const toggleReportExpand = (repId: number) => {
+    setExpandedReports(prev => ({ ...prev, [repId]: !prev[repId] }));
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -243,32 +248,42 @@ export default function WorkspacesPage() {
                     ) : (
                       authReports.map((rep: any) => {
                         const views = rep.views || rep.display_view_names || rep.displayviews || [];
+                        const isExpanded = expandedReports[rep.id] === true;
+
                         return (
-                          <div key={rep.id} className="flex flex-col gap-1.5 bg-[#f9fbff] border border-[#edf3f9] rounded-lg p-3 hover:border-[#bde0fe] transition-colors">
-                            {/* Report Header - Increased Font Size */}
-                            <Link
-                              href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
-                              className="flex items-center justify-between group"
-                            >
-                              <div className="flex items-center gap-2 truncate">
+                          <div key={rep.id} className="flex flex-col bg-[#f9fbff] border border-[#edf3f9] rounded-lg overflow-hidden transition-colors hover:border-[#bde0fe]">
+                            {/* Report Header Bar */}
+                            <div className="flex items-center justify-between p-2.5 bg-[#f6fafc]">
+                              <Link
+                                href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
+                                className="flex items-center gap-2 truncate group flex-1 min-w-0"
+                              >
                                 <FileText className="w-4 h-4 text-[#2f8fe0] shrink-0" />
                                 <span className="text-[13px] font-bold text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate">
                                   {rep.report_name}
                                 </span>
-                              </div>
-                              <ArrowRight className="w-3.5 h-3.5 text-[#8aa6bf] group-hover:text-[#2f8fe0] group-hover:translate-x-0.5 transition-all shrink-0" />
-                            </Link>
+                              </Link>
 
-                            {/* Views under report */}
-                            {views.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1 pl-6">
+                              {views.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleReportExpand(rep.id)}
+                                  className="text-[11px] font-semibold text-[#1e5f99] bg-white border border-[#c8dced] px-2 py-0.5 rounded-md hover:bg-[#eaf4fd] transition-colors cursor-pointer shrink-0 ml-2 select-none"
+                                >
+                                  {isExpanded ? "Hide Views" : `${views.length} View${views.length === 1 ? "" : "s"}`}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Views List (Collapsible, hidden by default) */}
+                            {isExpanded && views.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 p-2.5 bg-white border-t border-[#edf3f9]">
                                 {views.map((dv: any) => (
                                   <Link
                                     key={dv.id}
                                     href={`/workspaces/${workspace.id}?reportId=${rep.id}&viewId=${dv.id}`}
-                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-[#335375] bg-white border border-[#dce6f1] px-2 py-0.5 rounded-md hover:bg-[#eaf4fd] hover:text-[#1e5f99] hover:border-[#a6d4fa] transition-colors"
+                                    className="inline-flex items-center text-[11px] font-medium text-[#335375] bg-[#f0f6fc] border border-[#dce6f1] px-2.5 py-1 rounded-md hover:bg-[#2f8fe0] hover:text-white transition-colors cursor-pointer"
                                   >
-                                    <Eye className="w-3 h-3 text-[#2f8fe0]" />
                                     <span>{dv.displayview_name}</span>
                                   </Link>
                                 ))}

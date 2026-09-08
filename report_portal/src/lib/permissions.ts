@@ -63,30 +63,30 @@ export function getUserPermissions(): UserPermissions {
 
     const userRoleList = (decoded.role || "").split(',').map((r: string) => r.trim().toLowerCase());
 
-    // Super User: Full access to ALL Workspaces & Reports, NO access to Admin Panel
+    // Super User: Full access to ALL Workspaces & Reports
     const isSuperUser =
       userRoleList.includes("super user") ||
       userRoleList.includes("superuser") ||
       roles.some((r) => String(r).trim().toLowerCase() === "super user" || String(r).trim().toLowerCase() === "superuser");
 
-    // Admin: Full access to Admin Panel ONLY, NO access to Workspaces
+    // Admin: Full access to Admin Panel
     const isAdmin =
-      !isSuperUser &&
-      (decoded.is_admin === true ||
-       decoded.isAdmin === true ||
-       userRoleList.includes("admin") ||
-       userRoleList.includes("administrator") ||
-       roles.some((r) => String(r).trim().toLowerCase() === "admin") ||
-       email === "admin@hgusa.com" ||
-       userid === "admin");
+      decoded.is_admin === true ||
+      decoded.isAdmin === true ||
+      userRoleList.includes("admin") ||
+      userRoleList.includes("administrator") ||
+      roles.some((r) => String(r).trim().toLowerCase() === "admin") ||
+      email === "admin@hgusa.com" ||
+      userid === "admin";
 
     const hasWorkspaceRole =
       isSuperUser ||
       userRoleList.some((r: string) => r.includes("user") || r.includes("wsmember") || r === "workspace user") ||
       (Array.isArray(decoded.workspaces) && decoded.workspaces.length > 0);
 
-    const canAccessAdminPanel = isAdmin; // Admin ONLY!
-    const canAccessWorkspaces = isSuperUser || hasWorkspaceRole; // Super User & Workspace User ONLY! Admin has NO workspace access!
+    const isAdminOnly = isAdmin && !isSuperUser && !hasWorkspaceRole;
+    const canAccessAdminPanel = isAdmin;
+    const canAccessWorkspaces = isSuperUser || hasWorkspaceRole || !isAdminOnly;
 
     const userPerms: string[] = Array.isArray(decoded.permissions) ? decoded.permissions : [];
 
@@ -105,9 +105,9 @@ export function getUserPermissions(): UserPermissions {
       user: decoded,
       isAdmin,
       isSuperUser,
-      isAdminOnly: isAdmin,
+      isAdminOnly,
       canAccessAdminPanel,
-      canAccessWorkspaces: canAccessWorkspaces && !isAdmin,
+      canAccessWorkspaces,
       canManageUsers,
       canManageWorkspaces,
       canConfigureReports,
