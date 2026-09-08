@@ -573,7 +573,12 @@ const UserMaster = () => {
                 <TableRow><TableCell colSpan={5} className="text-center py-8 text-[#5c7f9f]">No users found.</TableCell></TableRow>
               ) : (
                 paginatedUsers.map((u: any) => {
-                  const roles = (u.role || "").split(",").filter((r:string)=>r.trim()!=="");
+                  const roles = (
+                    u.user_roles && u.user_roles.length > 0
+                      ? u.user_roles.map((ur: any) => ur.role?.role).filter(Boolean)
+                      : (u.role || "").split(",")
+                  ).map((r: string) => r.trim()).filter((r: string) => r !== "");
+
                   const wsCount = (u.workspaces || []).length;
                   const rptCount = (u.reports || []).length;
                   const isAdm = roles.some((r:string) => r.toLowerCase() === "admin") || u.is_admin;
@@ -598,9 +603,9 @@ const UserMaster = () => {
                       <TableCell className="font-semibold text-[#0f2b48]">{u.name}</TableCell>
                       <TableCell className="text-[#5c7f9f]">{u.email}</TableCell>
                       <TableCell>
-                         <div className="flex flex-wrap gap-1 max-w-[150px]">
+                         <div className="flex flex-wrap gap-1 max-w-[220px]">
                             {roles.length > 0 ? roles.map((r:string, i:number) => (
-                               <span key={i} className="px-1.5 py-0.5 rounded-md bg-[#eaf4fd] text-[#1e5f99] border border-[#c8dced] text-[9px]">{r}</span>
+                               <span key={i} className="px-2 py-0.5 rounded-md bg-[#eaf4fd] text-[#1e5f99] border border-[#c8dced] text-[10px] font-semibold">{r}</span>
                             )) : <span className="text-[#8aa6bf] italic">None</span>}
                          </div>
                       </TableCell>

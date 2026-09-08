@@ -160,7 +160,7 @@ export class UsersService implements OnModuleInit {
 
   findAllUsers() {
     return this.userRepository.find({
-      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report'],
+      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report', 'user_roles', 'user_roles.role'],
     });
   }
 
