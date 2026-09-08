@@ -19,9 +19,9 @@ const config = {
     tlsOptions: {
       rejectUnauthorized: false,
     },
-    timeout: 3000,  
+    timeout: 5000,  
     reconnect: false,
-    connectTimeout: 3000,
+    connectTimeout: 5000,
 };
 const ad = new ActiveDirectory(config);
 
@@ -72,7 +72,7 @@ export class AuthService {
         });
       });
 
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000));
       return (await Promise.race([detailsPromise, timeoutPromise])) as ADUser;
     } catch (e) {
       return null as any;
@@ -125,25 +125,36 @@ export class AuthService {
       if (adauthentication) {
         email = trimmedInput;
       } else {
-        // Retry alternate domain in case UPN differs
+        // Retry alternate domain or plain sAMAccountName in case UPN differs
         const altDomain = trimmedInput.endsWith('@hgusa.com')
           ? trimmedInput.replace('@hgusa.com', '@horizongroupusa.com')
           : trimmedInput.replace('@horizongroupusa.com', '@hgusa.com');
         adauthentication = await this.authenticateuser(altDomain, pass);
-        if (adauthentication) email = altDomain;
+        if (adauthentication) {
+          email = altDomain;
+        } else {
+          // Retry plain sAMAccountName
+          adauthentication = await this.authenticateuser(cleanUsername, pass);
+          if (adauthentication) email = `${cleanUsername}@horizongroupusa.com`;
+        }
       }
     } else {
-      // Username only: run parallel auth check against both corporate domains for instant response
-      const [res1, res2] = await Promise.all([
-        this.authenticateuser(`${cleanUsername}@horizongroupusa.com`, pass),
-        this.authenticateuser(`${cleanUsername}@hgusa.com`, pass),
-      ]);
-      if (res1) {
-        adauthentication = true;
+      // Username only: first try plain sAMAccountName, then domain UPNs
+      adauthentication = await this.authenticateuser(cleanUsername, pass);
+      if (adauthentication) {
         email = `${cleanUsername}@horizongroupusa.com`;
-      } else if (res2) {
-        adauthentication = true;
-        email = `${cleanUsername}@hgusa.com`;
+      } else {
+        const [res1, res2] = await Promise.all([
+          this.authenticateuser(`${cleanUsername}@horizongroupusa.com`, pass),
+          this.authenticateuser(`${cleanUsername}@hgusa.com`, pass),
+        ]);
+        if (res1) {
+          adauthentication = true;
+          email = `${cleanUsername}@horizongroupusa.com`;
+        } else if (res2) {
+          adauthentication = true;
+          email = `${cleanUsername}@hgusa.com`;
+        }
       }
     }
 
