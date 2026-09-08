@@ -115,7 +115,7 @@ const UserMaster = () => {
     }
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (!val || val.trim().length < 1) {
+    if (!val || val.trim().length < 2) {
       setAdSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -129,7 +129,7 @@ const UserMaster = () => {
         setShowSuggestions(list.length > 0);
       } catch (err) { console.error("AD search error:", err); } 
       finally { setIsSearchingAD(false); }
-    }, 200);
+    }, 350);
   };
 
   const handleSelectADUser = (adUser: any) => {

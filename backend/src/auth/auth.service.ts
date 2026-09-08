@@ -259,7 +259,7 @@ export class AuthService {
       const adPromise = new Promise<any[]>((resolve) => {
         let isDone = false;
         try {
-          ad.findUsers(searchQuery, true, (err: any, users: any[]) => {
+          ad.findUsers(searchQuery, false, (err: any, users: any[]) => {
             if (isDone) return;
             isDone = true;
             if (err || !users || !Array.isArray(users)) {
