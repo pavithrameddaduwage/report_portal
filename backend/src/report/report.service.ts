@@ -55,23 +55,40 @@ export class ReportService {
         return saved;
     }
 
-   async deleteReport(id:number){
+   async deleteReport(id: number) {
+        const numId = Number(id);
         const report = await this.reportRepository.findOne({
-            where: { id: id },
-            relations: ['users'],
-          })
-        
-          if (!report) {
-            throw new NotFoundException('Report not found')
-          }
-        
-          // Step 1: Remove relations (from join table)
-          report.users = []
-          await this.reportRepository.save(report)
-        
-          // Step 2: Delete the report itself
-          await this.reportRepository.remove(report)
-        // return this.reportRepository.delete({id:id})
+            where: { id: numId },
+            relations: ['users', 'display_view_names'],
+        });
+
+        if (!report) {
+            throw new NotFoundException('Report not found');
+        }
+
+        // 1. Delete associated display views to prevent FK constraint errors
+        try {
+            const displayViews = await this.displayviewRepository.find({
+                where: { report: { id: numId } },
+                relations: ['users'],
+            });
+
+            for (const dv of displayViews) {
+                dv.users = [];
+                await this.displayviewRepository.save(dv);
+                await this.displayviewRepository.remove(dv);
+            }
+        } catch (err) {
+            console.warn('Error clearing display views before report delete:', err?.message);
+        }
+
+        // 2. Clear user assignments from join table
+        report.users = [];
+        await this.reportRepository.save(report);
+
+        // 3. Delete the report itself
+        await this.reportRepository.remove(report);
+        return { success: true, message: 'Report deleted successfully' };
     }
 
   async createDisplayView(displayviewDto:any){
