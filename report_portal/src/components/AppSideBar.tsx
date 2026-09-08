@@ -312,8 +312,8 @@ export function AppSidebar() {
                 return `${parts[0]} ${parts[parts.length - 1][0]?.toUpperCase()}.`;
               })()}
             </span>
-            <span className="text-[#5aa8ea] text-[10px] font-medium leading-tight">
-              {permissions.user?.roles?.[0] || (permissions.isSuperUser ? "Super User" : permissions.isAdmin ? "Administrator" : "Workspace User")}
+            <span className="text-[#5aa8ea] text-[10px] font-medium leading-tight truncate max-w-[130px]" title={permissions.user?.roles ? permissions.user.roles.join(', ') : (permissions.user?.role || (permissions.isSuperUser ? "Super User" : permissions.isAdmin ? "Administrator" : "Workspace User"))}>
+              {permissions.user?.roles ? permissions.user.roles.join(', ') : (permissions.user?.role || (permissions.isSuperUser ? "Super User" : permissions.isAdmin ? "Administrator" : "Workspace User"))}
             </span>
           </div>
         </div>

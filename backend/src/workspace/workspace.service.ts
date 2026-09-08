@@ -85,7 +85,7 @@ export class WorkspaceService implements OnModuleInit {
 
 
     async findAllWorkspaces() {
-        return this.workspaceRepository.find({ relations: ['reports'] });
+        return this.workspaceRepository.find({ relations: ['reports', 'reports.display_view_names'] });
     }
 
     findWorkspaceById(id: any) {

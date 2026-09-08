@@ -6,7 +6,7 @@ import { findAllWorkspaces } from "@/services/workspace-services";
 import { findUserByEmail } from "@/services/user-service";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
-import { Search, Home, FileText, ArrowRight, Folder, Loader2 } from "lucide-react";
+import { Search, Home, FileText, ArrowRight, Folder, Loader2, Eye } from "lucide-react";
 
 export default function WorkspacesPage() {
   const router = useRouter(); 
@@ -91,8 +91,8 @@ export default function WorkspacesPage() {
       const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => Number(ws.id)) : [];
       const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => Number(rpt.id)) : [];
       const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((id: number) => !isNaN(id) && id > 0) : [];
+      const userAssignedDvIds = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.id)) : [];
 
-      const hasWsRole = userRoles.some((r: string) => r.includes('user') || r.includes('wsmember') || r === 'workspace user') || workspaceids.length > 0 || reportids.length > 0;
       if (isAdmin && !isSuperUser && !isSilent) {
         router.push("/admin/user_management");
         return;
@@ -108,10 +108,18 @@ export default function WorkspacesPage() {
           const authorizedReports = (ws.reports || [])
             .map((rpt: any) => {
               const rptIdNum = Number(rpt.id);
+              const rptViews = rpt.display_view_names || rpt.displayviews || [];
               const isRptAuth = isSuperUser || isWsAuth || reportids.includes(rptIdNum) || displayviewReportids.includes(rptIdNum);
+
+              const authorizedViews = rptViews.filter((dv: any) => {
+                const dvIdNum = Number(dv.id);
+                return isSuperUser || isRptAuth || userAssignedDvIds.includes(dvIdNum);
+              });
+
               return {
                 ...rpt,
-                authorized: isRptAuth,
+                authorized: isRptAuth || authorizedViews.length > 0,
+                views: authorizedViews,
               };
             })
             .filter((rpt: any) => rpt.authorized);
@@ -215,7 +223,7 @@ export default function WorkspacesPage() {
               >
                 <div>
                   {/* Card Header with Heading & Badge on same level */}
-                  <div className="flex items-center justify-between gap-2 pb-2.5 mb-2 border-b border-[#f0f6fc]">
+                  <div className="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b border-[#f0f6fc]">
                     <h3 className="font-bold text-base sm:text-lg text-[#0a1c30] truncate" title={workspace.name}>
                       {workspace.name}
                     </h3>
@@ -224,33 +232,54 @@ export default function WorkspacesPage() {
                     </span>
                   </div>
 
-                  {/* Reports List inside Card (fixed height so all cards are identical size) */}
-                  <div className="flex flex-col gap-1 my-1 h-[225px] overflow-y-auto pr-1">
+                  {/* Reports & Views List inside Card */}
+                  <div className="flex flex-col gap-2.5 my-1 min-h-[220px] max-h-[340px] overflow-y-auto pr-1">
                     {authReports.length === 0 ? (
-                      <div className="h-full flex items-center justify-center">
+                      <div className="h-full flex items-center justify-center py-8">
                         <span className="text-[11px] text-[#8aa6bf] italic">
                           No reports assigned yet
                         </span>
                       </div>
                     ) : (
-                      authReports.map((rep: any) => (
-                        <Link
-                          key={rep.id}
-                          href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
-                          className="flex items-center justify-between p-1.5 rounded-md hover:bg-[#f0f6fc] transition-colors group text-[11px]"
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <FileText className="w-3.5 h-3.5 text-[#2f8fe0] shrink-0" />
-                            <span className="text-[#0f2b48] font-medium truncate group-hover:text-[#2f8fe0]">
-                              {rep.report_name}
-                            </span>
+                      authReports.map((rep: any) => {
+                        const views = rep.views || rep.display_view_names || rep.displayviews || [];
+                        return (
+                          <div key={rep.id} className="flex flex-col gap-1.5 bg-[#f9fbff] border border-[#edf3f9] rounded-lg p-3 hover:border-[#bde0fe] transition-colors">
+                            {/* Report Header - Increased Font Size */}
+                            <Link
+                              href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
+                              className="flex items-center justify-between group"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <FileText className="w-4 h-4 text-[#2f8fe0] shrink-0" />
+                                <span className="text-[13px] font-bold text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate">
+                                  {rep.report_name}
+                                </span>
+                              </div>
+                              <ArrowRight className="w-3.5 h-3.5 text-[#8aa6bf] group-hover:text-[#2f8fe0] group-hover:translate-x-0.5 transition-all shrink-0" />
+                            </Link>
+
+                            {/* Views under report */}
+                            {views.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1 pl-6">
+                                {views.map((dv: any) => (
+                                  <Link
+                                    key={dv.id}
+                                    href={`/workspaces/${workspace.id}?reportId=${rep.id}&viewId=${dv.id}`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-[#335375] bg-white border border-[#dce6f1] px-2 py-0.5 rounded-md hover:bg-[#eaf4fd] hover:text-[#1e5f99] hover:border-[#a6d4fa] transition-colors"
+                                  >
+                                    <Eye className="w-3 h-3 text-[#2f8fe0]" />
+                                    <span>{dv.displayview_name}</span>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </Link>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
-
               </div>
             );
           })}
