@@ -35,19 +35,25 @@ export class AuthService {
     private roleRepository: Repository<RoleMaster>,
   ) {}
 
-  async authenticateuser(username: string, password: string): Promise<boolean> {
+  async authenticateuser(username: string, password: string, timeoutMs = 1500): Promise<boolean> {
     try {
       console.log('Attempting AD authentication for:', username);
-      return new Promise<boolean>((resolve) => {
+      const authPromise = new Promise<boolean>((resolve) => {
         ad.authenticate(username, password, (err: any, auth: boolean) => {
           if (err) {
-            console.log('AD authentication error:', err.message);
+            console.log('AD authentication notice:', err?.message);
             resolve(false);
           } else {
-            resolve(auth);
+            resolve(Boolean(auth));
           }
         });
       });
+
+      const timeoutPromise = new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), timeoutMs);
+      });
+
+      return await Promise.race([authPromise, timeoutPromise]);
     } catch (error) {
       console.error('AD authentication unexpected error:', error);
       return false;
@@ -55,26 +61,34 @@ export class AuthService {
   }
 
   async getADUserDetails(username: string): Promise<ADUser> {
-    let user = await new Promise<ADUser>((resolve, reject) => {
-        ad.findUser(username, function(err: any, user: ADUser) {
-            if (err) {
-                reject(err);
-            }
-            if (user) {
-                resolve(user);
-            } else {
-                resolve(null as any);
-            }
+    try {
+      const detailsPromise = new Promise<ADUser>((resolve) => {
+        ad.findUser(username, function (err: any, user: ADUser) {
+          if (err || !user) {
+            resolve(null as any);
+          } else {
+            resolve(user);
+          }
         });
-    });
-    return user;
+      });
+
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+      return (await Promise.race([detailsPromise, timeoutPromise])) as ADUser;
+    } catch (e) {
+      return null as any;
+    }
   }
 
-  async signIn(username: string, pass: string): Promise<any> {
-    username = username.toLowerCase().split('@')[0];
+  async signIn(usernameInput: string, pass: string): Promise<any> {
+    if (!usernameInput || !pass) {
+      throw new UnauthorizedException('Username and password are required');
+    }
+
+    const trimmedInput = usernameInput.trim().toLowerCase();
+    const cleanUsername = trimmedInput.split('@')[0];
 
     // ── Dev bypass: admin / admin ─────────────────────────────
-    if (username === 'admin' && pass === 'admin') {
+    if (cleanUsername === 'admin' && pass === 'admin') {
       console.log('[DEV] Admin bypass login used');
       const allPermissions = [
         'report_config',
@@ -89,7 +103,7 @@ export class AuthService {
       const payload = {
         email: 'admin@hgusa.com',
         name: 'Admin',
-        userid: 0,
+        userid: 'admin',
         role: 'Admin',
         roles: ['Admin', 'admin'],
         permissions: allPermissions,
@@ -103,34 +117,67 @@ export class AuthService {
 
     let email = '';
     let aduser: any = null;
+    let adauthentication = false;
 
-    // Authenticate with AD
-    let adauthentication = await this.authenticateuser(`${username}@hgusa.com`, pass);
-    if (!adauthentication) {
-      console.log('First domain auth failed, trying second domain...');
-      adauthentication = await this.authenticateuser(`${username}@horizongroupusa.com`, pass);
+    if (trimmedInput.includes('@')) {
+      // User entered a full email (e.g. user@horizongroupusa.com or user@hgusa.com)
+      adauthentication = await this.authenticateuser(trimmedInput, pass);
+      if (adauthentication) {
+        email = trimmedInput;
+      } else {
+        // Retry alternate domain in case UPN differs
+        const altDomain = trimmedInput.endsWith('@hgusa.com')
+          ? trimmedInput.replace('@hgusa.com', '@horizongroupusa.com')
+          : trimmedInput.replace('@horizongroupusa.com', '@hgusa.com');
+        adauthentication = await this.authenticateuser(altDomain, pass);
+        if (adauthentication) email = altDomain;
+      }
+    } else {
+      // Username only: run parallel auth check against both corporate domains for instant response
+      const [res1, res2] = await Promise.all([
+        this.authenticateuser(`${cleanUsername}@horizongroupusa.com`, pass),
+        this.authenticateuser(`${cleanUsername}@hgusa.com`, pass),
+      ]);
+      if (res1) {
+        adauthentication = true;
+        email = `${cleanUsername}@horizongroupusa.com`;
+      } else if (res2) {
+        adauthentication = true;
+        email = `${cleanUsername}@hgusa.com`;
+      }
     }
 
     if (!adauthentication) {
-      console.log('AD Authentication failed for user:', username);
+      console.log('AD Authentication failed for user:', usernameInput);
       throw new UnauthorizedException('Active Directory authentication failed - Please check your credentials');
+    }
+
+    // Fast-path lookup for existing user in DB
+    let existingDbUser = await this.userRepository.findOne({
+      where: [
+        { email: ILike(email) },
+        { email: ILike(`${cleanUsername}@horizongroupusa.com`) },
+        { email: ILike(`${cleanUsername}@hgusa.com`) },
+      ],
+    });
+
+    if (existingDbUser) {
+      email = existingDbUser.email;
     } else {
-      console.log('AD Authentication successful, getting AD user details...');
+      // New user: fetch details with 1s timeout fallback
       try {
-        aduser = await this.getADUserDetails(username);
-      } catch (e) {
-        console.log('Failed to fetch AD details, continuing with basics');
-      }
-      
+        aduser = await this.getADUserDetails(cleanUsername);
+      } catch (e) {}
+
       if (!aduser || !aduser.mail) {
         aduser = {
-          mail: `${username}@horizongroupusa.com`,
-          cn: username,
+          mail: email || `${cleanUsername}@horizongroupusa.com`,
+          cn: cleanUsername,
           department: null,
-          location: null
+          location: null,
         };
       }
-      email = aduser.mail.toLowerCase();
+      email = (aduser.mail || email).toLowerCase();
     }
 
     // Role check & First Login Superadmin appointment
@@ -140,15 +187,18 @@ export class AuthService {
 
     try {
       const totalUsersCount = await this.userRepository.count();
-      let existingDbUser = await this.userRepository.findOne({
-        where: { email: ILike(email) },
-      });
+
+      if (!existingDbUser) {
+        existingDbUser = await this.userRepository.findOne({
+          where: { email: ILike(email) },
+        });
+      }
 
       if (totalUsersCount === 0) {
         // First user to ever log in is automatically appointed as Administrator!
         console.log(`[First-Time Setup] No users in database. Appointing first login user (${email}) as Administrator.`);
         const firstAdmin = new User();
-        firstAdmin.name = aduser.cn || username;
+        firstAdmin.name = aduser?.cn || cleanUsername;
         firstAdmin.email = email;
         firstAdmin.is_admin = true;
         firstAdmin.role = 'Admin';
@@ -156,9 +206,9 @@ export class AuthService {
       } else if (!existingDbUser) {
         // Auto-create new user upon AD login if not yet in database
         const newUser = new User();
-        newUser.name = aduser.cn || username;
+        newUser.name = aduser?.cn || cleanUsername;
         newUser.email = email;
-        newUser.is_admin = username.toLowerCase() === 'admin' || email.toLowerCase() === 'admin@hgusa.com';
+        newUser.is_admin = cleanUsername.toLowerCase() === 'admin' || email.toLowerCase() === 'admin@hgusa.com';
         newUser.role = newUser.is_admin ? 'Admin' : 'User';
         existingDbUser = await this.userRepository.save(newUser);
       }
@@ -168,7 +218,7 @@ export class AuthService {
         Boolean(existingDbUser?.is_admin) ||
         userRolesList.includes('admin') ||
         email.toLowerCase() === 'admin@hgusa.com' ||
-        username.toLowerCase() === 'admin';
+        cleanUsername.toLowerCase() === 'admin';
 
       userRole = existingDbUser?.role || (isUserAdmin ? 'Admin' : 'User');
 
@@ -212,20 +262,22 @@ export class AuthService {
       console.warn('User DB lookup warning on login:', dbError?.message);
     }
 
+    const displayName = existingDbUser?.name || aduser?.cn || cleanUsername;
+
     const payload = {
       email: email,
-      name: aduser.cn || username,
-      userid: username,
+      name: displayName,
+      userid: cleanUsername,
       role: userRole,
       roles: isUserAdmin ? ['Admin', userRole] : [userRole],
       permissions: permissions,
       is_admin: isUserAdmin,
-      department: aduser.department,
-      location: aduser.location
+      department: aduser?.department || null,
+      location: aduser?.location || null,
     };
 
     return {
-      access_token: await this.jwtService.signAsync(payload)
+      access_token: await this.jwtService.signAsync(payload),
     };
   }
 

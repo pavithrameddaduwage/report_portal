@@ -19,16 +19,16 @@ export function AppSidebar() {
   
   const [permissions, setPermissions] = useState<UserPermissions>({
     user: null,
-    isAdmin: true,
-    canAccessAdminPanel: true,
-    canManageUsers: true,
-    canManageWorkspaces: true,
-    canConfigureReports: true,
-    canConfigureDisplayViews: true,
-    canScheduleReports: true,
-    canManageRoles: true,
-    canExportCsv: true,
-    canFilterSort: true,
+    isAdmin: false,
+    canAccessAdminPanel: false,
+    canManageUsers: false,
+    canManageWorkspaces: false,
+    canConfigureReports: false,
+    canConfigureDisplayViews: false,
+    canScheduleReports: false,
+    canManageRoles: false,
+    canExportCsv: false,
+    canFilterSort: false,
     permissions: [],
   });
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -62,37 +62,38 @@ export function AppSidebar() {
           }));
         }
       } else if (email) {
-        const userRes = await findUserByEmail({ email });
-        if (userRes.status === 200 && userRes.data) {
-           const userData = userRes.data;
-           const userWs = userData.workspaces || [];
-           const userReports = userData.reports || [];
-           
-           wsData = userWs.map((ws: any) => {
-              // Find reports that belong to this workspace AND are assigned to the user
-              const assignedReports = userReports.filter((rpt:any) => rpt.workspace?.id === ws.id || true); 
-              // Wait, in user.reports relation, we might not have workspace eagerly loaded if it's not set to. 
-              // But actually the best way is to fetch all workspaces and filter by user's assigned ones.
-           });
-           
-           // Fetch all to get the tree, then filter
-           const allWsRes = await findAllWorkspaces();
-           if (allWsRes.status === 200) {
-              const allWs = allWsRes.data || [];
-              const assignedWsIds = userWs.map((w:any) => w.id);
-              const assignedRptIds = userReports.map((r:any) => r.id);
-              
-              wsData = allWs
-                .filter((ws: any) => assignedWsIds.includes(ws.id) || (ws.reports || []).some((r:any) => assignedRptIds.includes(r.id)))
-                .map((ws: any) => {
-                   const hasWsAccess = assignedWsIds.includes(ws.id);
-                   return {
-                     ...ws,
-                     reports: (ws.reports || []).filter((r:any) => hasWsAccess || assignedRptIds.includes(r.id)).map((rpt: any) => ({ ...rpt, authorized: true })),
-                   };
-                })
-                .filter((ws:any) => ws.reports.length > 0 || assignedWsIds.includes(ws.id));
-           }
+        const [userRes, allWsRes] = await Promise.all([
+          findUserByEmail({ email }),
+          findAllWorkspaces(),
+        ]);
+
+        if (userRes.status === 200 && userRes.data && allWsRes.status === 200 && allWsRes.data) {
+          const userData = userRes.data;
+          const userWs = userData.workspaces || [];
+          const userReports = userData.reports || [];
+          const userDisplayViews = userData.displayviews || [];
+
+          const assignedWsIds = userWs.map((w: any) => Number(w.id));
+          const assignedRptIds = [
+            ...userReports.map((r: any) => Number(r.id)),
+            ...userDisplayViews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((id: any) => !isNaN(Number(id)) && Number(id) > 0),
+          ];
+
+          wsData = (allWsRes.data || [])
+            .map((ws: any) => {
+              const wsIdNum = Number(ws.id);
+              const hasWsAccess = assignedWsIds.includes(wsIdNum);
+
+              const authorizedReports = (ws.reports || [])
+                .filter((r: any) => hasWsAccess || assignedRptIds.includes(Number(r.id)))
+                .map((rpt: any) => ({ ...rpt, authorized: true }));
+
+              return {
+                ...ws,
+                reports: authorizedReports,
+              };
+            })
+            .filter((ws: any) => ws.reports.length > 0 || assignedWsIds.includes(Number(ws.id)));
         }
       }
 

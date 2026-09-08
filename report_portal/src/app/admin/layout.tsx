@@ -1,8 +1,9 @@
 "use client";
 
 import { AppSidebar } from "@/components/AppSideBar";
-import { ReactNode, Suspense } from "react";
-import { usePathname } from "next/navigation";
+import { ReactNode, Suspense, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { getUserPermissions } from "@/lib/permissions";
 
 const getPageTitle = (pathname: string) => {
   if (pathname.includes("report_configuration")) return "Report configuration";
@@ -16,7 +17,15 @@ const getPageTitle = (pathname: string) => {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const pageTitle = getPageTitle(pathname || "");
+
+  useEffect(() => {
+    const perms = getUserPermissions();
+    if (!perms.canAccessAdminPanel && !perms.isAdmin) {
+      router.push("/workspaces");
+    }
+  }, [pathname, router]);
 
   return (
     <div className="flex h-screen bg-[#f6f9fc] overflow-hidden">
