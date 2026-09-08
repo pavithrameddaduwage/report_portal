@@ -791,6 +791,18 @@ const UserMaster = () => {
           </div>
 
           <DialogFooter className="p-4 border-t border-[#edf3f9] bg-[#f9fbff]">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setSelectedWorkspaceIds([]);
+                setSelectedReportIds([]);
+                setSelectedDisplayViewIds([]);
+              }}
+              className="mr-auto text-xs h-8"
+            >
+              Clear
+            </Button>
             <Button variant="outline" onClick={() => setIsAccessModalOpen(false)} className="text-xs h-8">Cancel</Button>
             <Button onClick={() => {
               if (isBulkMode) {

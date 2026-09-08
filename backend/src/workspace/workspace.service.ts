@@ -102,7 +102,7 @@ export class WorkspaceService implements OnModuleInit {
 
 
     async findAllWorkspaces() {
-        return this.workspaceRepository.find({ relations: ['reports', 'reports.display_view_names'] });
+        return this.workspaceRepository.find({ relations: ['reports', 'reports.display_view_names', 'reports.users', 'users'] });
     }
 
     findWorkspaceById(id: any) {
@@ -160,11 +160,19 @@ export class WorkspaceService implements OnModuleInit {
     }
 
     async assignUsers(id: number, userIds: number[]) {
-        const workspace = await this.workspaceRepository.findOne({ where: { id } });
+        const workspace = await this.workspaceRepository.findOne({ where: { id }, relations: ['users'] });
         if (!workspace) throw new Error('Workspace not found');
-        
-        workspace.users = userIds.map((userId) => ({ id: userId }) as any);
-        await this.workspaceRepository.save(workspace);
+
+        const nextUserIds = [...new Set((userIds || []).map(Number).filter((userId) => Number.isInteger(userId) && userId > 0))];
+        const currentUserIds = (workspace.users || []).map(({ id }) => id);
+        const addUserIds = nextUserIds.filter((userId) => !currentUserIds.includes(userId));
+        const removeUserIds = currentUserIds.filter((userId) => !nextUserIds.includes(userId));
+
+        await this.workspaceRepository
+            .createQueryBuilder()
+            .relation(Workspace, 'users')
+            .of(id)
+            .addAndRemove(addUserIds, removeUserIds);
         return { success: true, message: `Assigned ${userIds.length} users to workspace.` };
     }
 }

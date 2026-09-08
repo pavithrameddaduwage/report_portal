@@ -22,6 +22,7 @@ export default function ResourceAccess() {
     fetchDisplayViews: fetchDisplayViewsCtx,
     fetchUsers: fetchUsersCtx,
     fetchReports: fetchReportsCtx,
+    fetchAllData: fetchAllDataCtx,
   } = useData();
 
   const [workspaces, setWorkspaces] = useState<any[]>(cachedWorkspaces || []);
@@ -44,10 +45,10 @@ export default function ResourceAccess() {
   const fetchData = async () => {
     try {
       const [wsList, rptList, dvList, userList] = await Promise.all([
-        fetchWorkspacesCtx(),
-        fetchReportsCtx(),
-        fetchDisplayViewsCtx(),
-        fetchUsersCtx(),
+        fetchWorkspacesCtx(true),
+        fetchReportsCtx(true),
+        fetchDisplayViewsCtx(true),
+        fetchUsersCtx(true),
       ]);
 
       if (wsList.length > 0) {
@@ -120,7 +121,8 @@ export default function ResourceAccess() {
       if (res?.status === 200 || res?.status === 201 || res?.success) {
         toast.success(`Access updated for ${selectedUserIds.length} users`);
         setIsManageAccessOpen(false);
-        fetchData();
+        await fetchAllDataCtx(true);
+        await fetchData();
       } else {
         toast.error("Failed to assign permissions");
       }

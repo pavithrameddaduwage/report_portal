@@ -17,7 +17,7 @@ export class ReportService {
     ){}
 
     findAllReports(){
-        return this.reportRepository.find({relations:['workspace','columns','display_view_names']})
+        return this.reportRepository.find({relations:['workspace','columns','display_view_names','users']})
     }
 
     findReportsByWorkspaceId(workspaceid:number){
@@ -165,7 +165,7 @@ export class ReportService {
     }
 
   findAllDisplayViews(){
-    return this.displayviewRepository.find({relations:['report','report.workspace','displayview_columns']})
+    return this.displayviewRepository.find({relations:['report','report.workspace','displayview_columns','users']})
   }
 
   findDisplayViewByReportId(reportId:number){
@@ -188,20 +188,34 @@ export class ReportService {
   }
 
   async assignUsersToReport(id: number, userIds: number[]) {
-      const report = await this.reportRepository.findOne({ where: { id } });
+      const report = await this.reportRepository.findOne({ where: { id }, relations: ['users'] });
       if (!report) throw new NotFoundException('Report not found');
-      
-      report.users = userIds.map((userId) => ({ id: userId }) as any);
-      await this.reportRepository.save(report);
+
+      const nextUserIds = [...new Set((userIds || []).map(Number).filter((userId) => Number.isInteger(userId) && userId > 0))];
+      const currentUserIds = (report.users || []).map(({ id }) => id);
+      const addUserIds = nextUserIds.filter((userId) => !currentUserIds.includes(userId));
+      const removeUserIds = currentUserIds.filter((userId) => !nextUserIds.includes(userId));
+      await this.reportRepository
+        .createQueryBuilder()
+        .relation(Report, 'users')
+        .of(id)
+        .addAndRemove(addUserIds, removeUserIds);
       return { success: true, message: `Assigned ${userIds.length} users to report.` };
   }
 
   async assignUsersToDisplayView(id: number, userIds: number[]) {
-      const view = await this.displayviewRepository.findOne({ where: { id } });
+      const view = await this.displayviewRepository.findOne({ where: { id }, relations: ['users'] });
       if (!view) throw new NotFoundException('Display view not found');
-      
-      view.users = userIds.map((userId) => ({ id: userId }) as any);
-      await this.displayviewRepository.save(view);
+
+      const nextUserIds = [...new Set((userIds || []).map(Number).filter((userId) => Number.isInteger(userId) && userId > 0))];
+      const currentUserIds = (view.users || []).map(({ id }) => id);
+      const addUserIds = nextUserIds.filter((userId) => !currentUserIds.includes(userId));
+      const removeUserIds = currentUserIds.filter((userId) => !nextUserIds.includes(userId));
+      await this.displayviewRepository
+        .createQueryBuilder()
+        .relation(DisplayView, 'users')
+        .of(id)
+        .addAndRemove(addUserIds, removeUserIds);
       return { success: true, message: `Assigned ${userIds.length} users to display view.` };
   }
 }
