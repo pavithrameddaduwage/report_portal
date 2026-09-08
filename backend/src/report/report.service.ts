@@ -24,6 +24,18 @@ export class ReportService {
         return this.reportRepository.find({where:{workspace:{id:workspaceid}},relations:['columns','users']})
     }
 
+    private async syncSequence(tableName: string, idColumn: string = 'id') {
+        try {
+            await this.reportRepository.query(
+                `SELECT setval(pg_get_serial_sequence('"${tableName}"', '${idColumn}'), COALESCE((SELECT MAX("${idColumn}") FROM "${tableName}"), 0) + 1, false);`
+            ).catch(async () => {
+                await this.reportRepository.query(
+                    `SELECT setval('${tableName}_${idColumn}_seq', COALESCE((SELECT MAX("${idColumn}") FROM "${tableName}"), 0) + 1, false);`
+                ).catch(() => {});
+            });
+        } catch (e) {}
+    }
+
     async createReport(data:any){
         const report=new Report()
         report.report_name=data.report_name
@@ -34,19 +46,35 @@ export class ReportService {
         report.columns=data.columns as ReportColumns[]
         if (!report.id || report.id==null ||report.id==0){
             delete report.id
+            await this.syncSequence('report', 'id');
         }
-        const saved = await this.reportRepository.save(report);
+
+        let saved;
+        try {
+            saved = await this.reportRepository.save(report);
+        } catch (err) {
+            if (err?.message?.includes('duplicate key') || err?.code === '23505') {
+                await this.syncSequence('report', 'id');
+                saved = await this.reportRepository.save(report);
+            } else {
+                throw err;
+            }
+        }
 
         try {
           const existingDv = await this.displayviewRepository.findOne({
             where: { report: { id: saved.id }, displayview_name: saved.report_name }
           });
           if (!existingDv) {
+            await this.syncSequence('display_view', 'id');
             const dv = new DisplayView();
             dv.displayview_name = saved.report_name;
             dv.report = saved;
             dv.displayview_columns = [];
-            await this.displayviewRepository.save(dv);
+            await this.displayviewRepository.save(dv).catch(async () => {
+              await this.syncSequence('display_view', 'id');
+              return this.displayviewRepository.save(dv);
+            });
           }
         } catch (e) {
           console.warn("Notice ensuring default display view:", e?.message);

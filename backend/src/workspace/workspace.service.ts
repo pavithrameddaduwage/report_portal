@@ -21,8 +21,25 @@ export class WorkspaceService implements OnModuleInit {
         private readonly roleRepository: Repository<RoleMaster>,
     ) {}
 
+    private async syncSequence(tableName: string = 'workspace', idColumn: string = 'id') {
+        try {
+            await this.workspaceRepository.query(
+                `SELECT setval(pg_get_serial_sequence('"${tableName}"', '${idColumn}'), COALESCE((SELECT MAX("${idColumn}") FROM "${tableName}"), 0) + 1, false);`
+            ).catch(async () => {
+                await this.workspaceRepository.query(
+                    `SELECT setval('${tableName}_${idColumn}_seq', COALESCE((SELECT MAX("${idColumn}") FROM "${tableName}"), 0) + 1, false);`
+                ).catch(() => {});
+            });
+        } catch (e) {
+            // Ignore if non-postgres or non-sequence column
+        }
+    }
+
     async onModuleInit() {
-        // Module initialized without blocking database table cleanup
+        const tables = ['workspace', 'report', 'display_view', 'role_master', 'users', 'user_roles', 'role_access', 'report_schedule', 'report_schedule_log'];
+        for (const table of tables) {
+            await this.syncSequence(table).catch(() => {});
+        }
     }
 
     async cleanupDummyData() {
@@ -96,8 +113,23 @@ export class WorkspaceService implements OnModuleInit {
         if (!workspace.id || workspace.id == 0) {
             delete workspace.id;
         }
+
+        if (!workspace.id) {
+            await this.syncSequence('workspace', 'id');
+        }
         
-        const createdWorkspace = await this.workspaceRepository.save(workspace);
+        let createdWorkspace;
+        try {
+            createdWorkspace = await this.workspaceRepository.save(workspace);
+        } catch (err) {
+            if (err?.message?.includes('duplicate key') || err?.code === '23505') {
+                this.logger.warn(`Duplicate key encountered on workspace save. Syncing sequence and retrying...`);
+                await this.syncSequence('workspace', 'id');
+                createdWorkspace = await this.workspaceRepository.save(workspace);
+            } else {
+                throw err;
+            }
+        }
         
         try {
             // Automatically add a role for this workspace if it doesn't exist
@@ -105,10 +137,14 @@ export class WorkspaceService implements OnModuleInit {
                 const roleName = `${createdWorkspace.name} WSMember`;
                 const existingRole = await this.roleRepository.findOne({ where: { role: roleName }});
                 if (!existingRole) {
+                    await this.syncSequence('role_master', 'id');
                     const newRole = new RoleMaster();
                     newRole.role = roleName;
                     newRole.permissions = JSON.stringify(['filter_sort']);
-                    await this.roleRepository.save(newRole);
+                    await this.roleRepository.save(newRole).catch(async () => {
+                        await this.syncSequence('role_master', 'id');
+                        return this.roleRepository.save(newRole);
+                    });
                     this.logger.log(`Auto-created role: ${roleName} for workspace ${createdWorkspace.name}`);
                 }
             }
