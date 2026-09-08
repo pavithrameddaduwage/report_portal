@@ -2,11 +2,11 @@ import apiClient from './apiClient';
 
 export const findAllWorkspaces = async (): Promise<any> => {
   try {
-    const response = await apiClient.get(`/workspace/findAllWorkspaces`);
+    const response = await apiClient.get(`/workspace/findAllWorkspaces?refresh=${Date.now()}`);
     return response;
   } catch (error) {
     console.error("Error fetching workspaces:", error);
-    return { status: 200, data: [] };
+    throw error;
   }
 };
 

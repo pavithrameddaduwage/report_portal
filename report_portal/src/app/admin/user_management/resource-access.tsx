@@ -7,26 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Shield, Folder, FileText, Eye, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { findAllWorkspaces, assignUsersToWorkspace } from "@/services/workspace-services";
-import { findAllReports, findAllDisplayViews, assignUsersToReport, assignUsersToDisplayView } from "@/services/report-service";
-import { findAllusers } from "@/services/user-service";
+import { assignUsersToWorkspace } from "@/services/workspace-services";
+import { assignUsersToReport, assignUsersToDisplayView } from "@/services/report-service";
 import { toast } from "sonner";
 import { useData } from "@/context/DataContext";
 
 export default function ResourceAccess() {
   const {
     workspaces: cachedWorkspaces,
+    users: cachedUsers,
+    reports: cachedReports,
     displayViews: cachedDisplayViews,
     fetchWorkspaces: fetchWorkspacesCtx,
     fetchDisplayViews: fetchDisplayViewsCtx,
+    fetchUsers: fetchUsersCtx,
+    fetchReports: fetchReportsCtx,
   } = useData();
 
   const [workspaces, setWorkspaces] = useState<any[]>(cachedWorkspaces || []);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("all");
   
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>(cachedReports || []);
   const [displayViews, setDisplayViews] = useState<any[]>(cachedDisplayViews || []);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>(cachedUsers || []);
 
   const [isManageAccessOpen, setIsManageAccessOpen] = useState(false);
   const [targetType, setTargetType] = useState<"workspace" | "report" | "display_view">("workspace");
@@ -39,23 +42,22 @@ export default function ResourceAccess() {
 
   const fetchData = async () => {
     try {
-      const [wsRes, rptRes, dvRes, userRes] = await Promise.all([
-        findAllWorkspaces(),
-        findAllReports(),
-        findAllDisplayViews(),
-        findAllusers(),
+      const [wsList, rptList, dvList, userList] = await Promise.all([
+        fetchWorkspacesCtx(),
+        fetchReportsCtx(),
+        fetchDisplayViewsCtx(),
+        fetchUsersCtx(),
       ]);
 
-      if (wsRes.status === 200) {
-        const wsList = wsRes.data || [];
+      if (wsList.length > 0) {
         setWorkspaces(wsList);
         if (wsList.length > 0 && selectedWorkspaceId === "all") {
           setSelectedWorkspaceId(String(wsList[0].id));
         }
       }
-      if (rptRes.status === 200) setReports(rptRes.data || []);
-      if (dvRes.status === 200) setDisplayViews(dvRes.data || []);
-      if (userRes.status === 200) setAllUsers(userRes.data || []);
+      setReports(rptList);
+      setDisplayViews(dvList);
+      setAllUsers(userList);
     } catch (error) {
       console.error("Error fetching resource permission data:", error);
     }
@@ -64,6 +66,13 @@ export default function ResourceAccess() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setWorkspaces(cachedWorkspaces || []);
+    setReports(cachedReports || []);
+    setDisplayViews(cachedDisplayViews || []);
+    setAllUsers(cachedUsers || []);
+  }, [cachedWorkspaces, cachedReports, cachedDisplayViews, cachedUsers]);
 
   const handleOpenManagePermission = (type: "workspace" | "report" | "display_view", target: any) => {
     setTargetType(type);

@@ -3,48 +3,36 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { findAllusers } from "@/services/user-service";
-import { findAllWorkspaces } from "@/services/workspace-services";
-import { findAllReports, findAllDisplayViews } from "@/services/report-service";
 import { UserCheck, Folder, FileText, Eye } from "lucide-react";
+import { useData } from "@/context/DataContext";
 
 export default function UserAccessView() {
-  const [users, setUsers] = useState<any[]>([]);
+  const { users, workspaces, reports, displayViews, fetchAllData } = useData();
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
-  const [displayViews, setDisplayViews] = useState<any[]>([]);
-
   useEffect(() => {
-    fetchInitialData();
+    fetchAllData(true);
   }, []);
 
-  const fetchInitialData = async () => {
-    try {
-      const [uRes, wsRes, rptRes, dvRes] = await Promise.all([
-        findAllusers(),
-        findAllWorkspaces(),
-        findAllReports(),
-        findAllDisplayViews(),
-      ]);
+  useEffect(() => {
+    const refresh = () => fetchAllData(true);
+    const interval = window.setInterval(refresh, 10000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
 
-      if (uRes.status === 200) {
-        const list = uRes.data || [];
-        setUsers(list);
-        if (list.length > 0) {
-          setSelectedUserId(String(list[0].id));
-          setSelectedUser(list[0]);
-        }
-      }
-      if (wsRes.status === 200) setWorkspaces(wsRes.data || []);
-      if (rptRes.status === 200) setReports(rptRes.data || []);
-      if (dvRes.status === 200) setDisplayViews(dvRes.data || []);
-    } catch (err) {
-      console.error("Error fetching data for User Access View:", err);
+  useEffect(() => {
+    if (!selectedUserId && users.length > 0) {
+      setSelectedUserId(String(users[0].id));
+      setSelectedUser(users[0]);
+    } else if (selectedUserId) {
+      setSelectedUser(users.find(user => String(user.id) === selectedUserId) || null);
     }
-  };
+  }, [selectedUserId, users]);
 
   const handleSelectUser = (idStr: string) => {
     setSelectedUserId(idStr);
@@ -60,21 +48,21 @@ export default function UserAccessView() {
     const isAdmin = selectedUser.is_admin === true || userRoles.some(r => r === "admin" || r === "administrator");
     const isSuperUser = userRoles.some(r => r === "super user" || r === "superuser");
 
-    const assignedWsIds = (selectedUser.workspaces || []).map((w: any) => w.id);
-    const assignedRptIds = (selectedUser.reports || []).map((r: any) => r.id);
-    const assignedDvIds = (selectedUser.displayviews || []).map((dv: any) => dv.id);
+    const assignedWsIds = (selectedUser.workspaces || []).map((w: any) => Number(w.id));
+    const assignedRptIds = (selectedUser.reports || []).map((r: any) => Number(r.id));
+    const assignedDvIds = (selectedUser.displayviews || []).map((dv: any) => Number(dv.id));
 
     let rows: any[] = [];
 
     workspaces.forEach((ws: any) => {
       const wsNameLower = String(ws.name || "").toLowerCase();
       const isWsMemberByRole = isSuperUser || userRoles.some((r: string) => r.includes(wsNameLower) || r === `${wsNameLower} wsmember`);
-      const hasWsDirectAccess = isAdmin || isSuperUser || isWsMemberByRole || assignedWsIds.includes(ws.id);
+      const hasWsDirectAccess = isAdmin || isSuperUser || isWsMemberByRole || assignedWsIds.includes(Number(ws.id));
 
-      const wsReports = reports.filter((r: any) => r.workspace?.id === ws.id);
+      const wsReports = reports.filter((r: any) => Number(r.workspace?.id) === Number(ws.id));
 
       wsReports.forEach((rpt: any) => {
-        const hasReportDirectAccess = hasWsDirectAccess || assignedRptIds.includes(rpt.id);
+        const hasReportDirectAccess = hasWsDirectAccess || assignedRptIds.includes(Number(rpt.id));
 
         const rptDisplayViews = displayViews.filter((dv: any) => dv.report?.id === rpt.id);
 

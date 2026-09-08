@@ -80,24 +80,7 @@ export function getUserPermissions(): UserPermissions {
     const canExportCsv = isAdmin || hasPerm("csv_export");
     const canFilterSort = isAdmin || hasPerm("filter_sort");
 
-    const canAccessAdminPanel =
-      isAdmin ||
-      canManageUsers ||
-      canManageWorkspaces ||
-      canConfigureReports ||
-      canConfigureDisplayViews ||
-      canScheduleReports ||
-      canManageRoles ||
-      userPerms.some((p) =>
-        [
-          "user_management",
-          "workspace_management",
-          "report_config",
-          "display_view",
-          "report_scheduler",
-          "roles_permissions",
-        ].includes(p)
-      );
+    const canAccessAdminPanel = isAdmin;
 
     return {
       user: decoded,

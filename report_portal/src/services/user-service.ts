@@ -1,8 +1,8 @@
 import apiClient from './apiClient';
 
-export const findUserByEmail = async (data: { email: string }): Promise<any> => {
+export const findUserByEmail = async (data: { email: string; userid?: string }): Promise<any> => {
   try {
-    const response = await apiClient.post(`/users/findUserByEmail`, data);
+    const response = await apiClient.post(`/users/findUserByEmail?refresh=${Date.now()}`, data);
     return response;
   } catch (error) {
     console.error(error);
@@ -12,7 +12,7 @@ export const findUserByEmail = async (data: { email: string }): Promise<any> => 
 
 export const findAllusers = async (): Promise<any> => {
   try {
-    const response = await apiClient.get(`/users/findAllUsers`);
+    const response = await apiClient.get(`/users/findAllUsers?refresh=${Date.now()}`);
     return response;
   } catch (error) {
     console.error(error);

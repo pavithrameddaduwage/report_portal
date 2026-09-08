@@ -38,10 +38,11 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         decoded?.is_admin === true ||
         decoded?.isAdmin === true ||
         rawRole === "admin" ||
-        rawRole === "administrator";
+        rawRole === "administrator" ||
+        (Array.isArray(decoded?.roles) && decoded.roles.some((role: any) => ["admin", "administrator"].includes(String(role).trim().toLowerCase())));
 
       const [userRes, wsRes] = await Promise.allSettled([
-        email ? findUserByEmail({ email }) : Promise.resolve(null),
+        email ? findUserByEmail({ email, userid: decoded?.userid }) : Promise.resolve(null),
         findWorkspaceById(parseInt(id)),
       ]);
 
@@ -63,13 +64,14 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         const data = wsRes.value.data;
         const wsNameLower = String(data.name || "").toLowerCase();
         const isWsMemberByRole = isSuperUser || userRoles.some((r: string) => r.includes(wsNameLower) || r === `${wsNameLower} wsmember`);
-        const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => ws.id) : [];
-        const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => rpt.id) : [];
-        const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => dv.report?.id || dv.reportId).filter(Boolean) : [];
+        const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => Number(ws.id)) : [];
+        const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => Number(rpt.id)) : [];
+        const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((value: number) => !isNaN(value)) : [];
 
         data.reports = (data.reports || [])
           .map((rpt: any) => {
-            rpt["authorized"] = isAdmin || isWsMemberByRole || workspaceids.includes(data.id) || reportids.includes(rpt.id) || displayviewReportids.includes(rpt.id);
+            const reportIdNumber = Number(rpt.id);
+            rpt["authorized"] = isAdmin || isWsMemberByRole || workspaceids.includes(Number(data.id)) || reportids.includes(reportIdNumber) || displayviewReportids.includes(reportIdNumber);
             return rpt;
           })
           .filter((rpt: any) => rpt.authorized);
@@ -117,20 +119,20 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       const targetWs = currentWs || workspace;
       const wsNameLower = String(targetWs?.name || "").toLowerCase();
       const isWsMemberByRole = isSuperUser || userRoles.some((r: string) => r.includes(wsNameLower) || r === `${wsNameLower} wsmember`);
-      const isDirectWsAuth = (tempuser?.workspaces || []).some((w: any) => w.id === targetWs?.id);
+      const isDirectWsAuth = (tempuser?.workspaces || []).some((w: any) => Number(w.id) === Number(targetWs?.id));
       
-      const userAssignedReportIds = (tempuser?.reports || []).map((r: any) => r.id);
-      const userAssignedDvIds = (tempuser?.displayviews || []).map((dv: any) => dv.id);
+      const userAssignedReportIds = (tempuser?.reports || []).map((r: any) => Number(r.id));
+      const userAssignedDvIds = (tempuser?.displayviews || []).map((dv: any) => Number(dv.id));
 
       // Rule 1: If user has access to Default View (named as report_name or report assignment), user gets ALL views of report!
       const hasDefaultViewAccess = (tempuser?.displayviews || []).some((dv: any) => {
-        const dvReportId = dv.report?.id || dv.reportId;
+        const dvReportId = Number(dv.report?.id || dv.reportId);
         const dvNameLower = String(dv.displayview_name || "").toLowerCase();
         const rptNameLower = String(report.report_name || "").toLowerCase();
-        return dvReportId === report.id && (dvNameLower === rptNameLower || dvNameLower === "default view");
+        return dvReportId === Number(report.id) && (dvNameLower === rptNameLower || dvNameLower === "default view");
       });
 
-      const hasFullReportAccess = isAdmin || isWsMemberByRole || isDirectWsAuth || userAssignedReportIds.includes(report.id) || hasDefaultViewAccess;
+      const hasFullReportAccess = isAdmin || isWsMemberByRole || isDirectWsAuth || userAssignedReportIds.includes(Number(report.id)) || hasDefaultViewAccess;
 
       let alloweddv: any = [];
       if (hasFullReportAccess) {
@@ -139,7 +141,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
       } else {
         // Rule 2: Grant only specific assigned views
         allDvs.forEach((f: any) => {
-          if (userAssignedDvIds.includes(f.id)) {
+          if (userAssignedDvIds.includes(Number(f.id))) {
             alloweddv.push({ value: f.id, label: f.displayview_name });
           }
         });

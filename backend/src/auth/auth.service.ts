@@ -35,7 +35,7 @@ export class AuthService {
     private roleRepository: Repository<RoleMaster>,
   ) {}
 
-  async authenticateuser(username: string, password: string, timeoutMs = 1500): Promise<boolean> {
+  async authenticateuser(username: string, password: string, timeoutMs = 5000): Promise<boolean> {
     try {
       console.log('Attempting AD authentication for:', username);
       const authPromise = new Promise<boolean>((resolve) => {

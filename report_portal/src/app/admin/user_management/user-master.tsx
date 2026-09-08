@@ -126,6 +126,9 @@ const UserMaster = () => {
 
   // STEP 1: Add User Form submission -> Opens Step 2 Modal
   const onProceedToPermissions = (data: any) => {
+    const role = selectedRoles.join(", ");
+    form.setValue("role", role, { shouldValidate: true });
+    data = { ...data, role };
     const isAdm = selectedRoles.some(r => r.toLowerCase() === "admin");
     if (isAdm) {
        // Admins get everything, skip modal
@@ -139,24 +142,25 @@ const UserMaster = () => {
   // STEP 2: Submit to backend
   const submitUserToBackend = async (data: any, wsIds: number[], rptIds: number[], dvIds: number[]) => {
     try {
-      const roleArray = (data.role || "").split(',').map((r: string) => r.trim().toLowerCase());
+      const role = selectedRoles.join(", ") || data.role || "User";
+      const roleArray = role.split(',').map((r: string) => r.trim().toLowerCase());
       const isAdm = roleArray.includes("admin");
       const payload: any = {
         id: selectedUser?.id || undefined,
         name: data.name.trim(),
         email: data.email.trim(),
-        role: data.role, // Comma separated string
+        role,
         is_admin: isAdm,
         is_active: isActive,
-        workspaceIds: isAdm ? [] : wsIds,
-        reportIds: isAdm ? [] : rptIds,
-        displayviewIds: isAdm ? [] : dvIds,
+        workspaceIds: isAdm ? [] : [...new Set(wsIds.map(Number))],
+        reportIds: isAdm ? [] : [...new Set(rptIds.map(Number))],
+        displayviewIds: isAdm ? [] : [...new Set(dvIds.map(Number))],
       };
 
       const res: any = await createUser(payload);
       if (res.status === 200 || res.status === 201 || res?.data || res?.id) {
         toast.success(selectedUser ? "User updated successfully" : "User added successfully");
-        fetchUsers();
+        await fetchUsers();
         handleCancel();
         setIsAccessModalOpen(false);
       } else {
@@ -368,8 +372,11 @@ const UserMaster = () => {
                           key={role.id} 
                           checked={selectedRoles.includes(role.role)} 
                           onCheckedChange={(checked) => {
-                             if(checked) setSelectedRoles(prev => [...prev, role.role]);
-                             else setSelectedRoles(prev => prev.filter(r => r !== role.role));
+                              const nextRoles = checked
+                               ? [...selectedRoles, role.role]
+                               : selectedRoles.filter(r => r !== role.role);
+                              setSelectedRoles(nextRoles);
+                              form.setValue("role", nextRoles.join(", "), { shouldValidate: true });
                           }}>
                            {role.role}
                         </DropdownMenuCheckboxItem>

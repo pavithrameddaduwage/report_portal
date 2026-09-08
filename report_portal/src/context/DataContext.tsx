@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { findAllusers, findAllRoles } from "@/services/user-service";
 import { findAllWorkspaces } from "@/services/workspace-services";
-import { findAllDisplayViews } from "@/services/report-service";
+import { findAllReports, findAllDisplayViews } from "@/services/report-service";
 
 interface DataContextType {
   users: any[];
   workspaces: any[];
   roles: any[];
   displayViews: any[];
+  reports: any[];
   loadingUsers: boolean;
   loadingWorkspaces: boolean;
   loadingRoles: boolean;
@@ -19,6 +20,7 @@ interface DataContextType {
   fetchWorkspaces: (force?: boolean) => Promise<any[]>;
   fetchRoles: (force?: boolean) => Promise<any[]>;
   fetchDisplayViews: (force?: boolean) => Promise<any[]>;
+  fetchReports: (force?: boolean) => Promise<any[]>;
   fetchAllData: (force?: boolean) => Promise<void>;
   setUsers: React.Dispatch<React.SetStateAction<any[]>>;
   setWorkspaces: React.Dispatch<React.SetStateAction<any[]>>;
@@ -31,6 +33,7 @@ const STORAGE_KEYS = {
   WORKSPACES: "rp_cache_workspaces",
   ROLES: "rp_cache_roles",
   DISPLAY_VIEWS: "rp_cache_display_views",
+  REPORTS: "rp_cache_reports",
 };
 
 const getStorageItem = (key: string) => {
@@ -55,6 +58,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [workspaces, setWorkspaces] = useState<any[]>(() => getStorageItem(STORAGE_KEYS.WORKSPACES) || []);
   const [roles, setRoles] = useState<any[]>(() => getStorageItem(STORAGE_KEYS.ROLES) || []);
   const [displayViews, setDisplayViews] = useState<any[]>(() => getStorageItem(STORAGE_KEYS.DISPLAY_VIEWS) || []);
+  const [reports, setReports] = useState<any[]>(() => getStorageItem(STORAGE_KEYS.REPORTS) || []);
 
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState<boolean>(false);
@@ -142,6 +146,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return displayViews;
   }, [displayViews]);
 
+  const fetchReports = useCallback(async (force = false) => {
+    if (!force && reports.length > 0) return reports;
+    try {
+      const res = await findAllReports();
+      const reportList = res?.data || res || [];
+      if (Array.isArray(reportList)) {
+        setReports(reportList);
+        setStorageItem(STORAGE_KEYS.REPORTS, reportList);
+        return reportList;
+      }
+    } catch (err) {
+      console.error("Failed to fetch reports:", err);
+    }
+    return reports;
+  }, [reports]);
+
   // Fetch All Master Data concurrently
   const fetchAllData = useCallback(async (force = false) => {
     try {
@@ -150,12 +170,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchWorkspaces(force),
         fetchRoles(force),
         fetchDisplayViews(force),
+        fetchReports(force),
       ]);
       setInitialLoaded(true);
     } catch (err) {
       console.error("Error loading master data:", err);
     }
-  }, [fetchUsers, fetchWorkspaces, fetchRoles, fetchDisplayViews]);
+  }, [fetchUsers, fetchWorkspaces, fetchRoles, fetchDisplayViews, fetchReports]);
 
   // Automatically trigger background fetch on mount if empty
   useEffect(() => {
@@ -170,6 +191,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         workspaces,
         roles,
         displayViews,
+        reports,
         loadingUsers,
         loadingWorkspaces,
         loadingRoles,
@@ -179,6 +201,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchWorkspaces,
         fetchRoles,
         fetchDisplayViews,
+        fetchReports,
         fetchAllData,
         setUsers,
         setWorkspaces,

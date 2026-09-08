@@ -17,6 +17,9 @@ apiClient.interceptors.request.use(
     if (!config.baseURL) {
       config.baseURL = getApiUrl();
     }
+    config.headers = config.headers || {};
+    config.headers['Cache-Control'] = 'no-cache, no-store';
+    config.headers['Pragma'] = 'no-cache';
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('access_token');
       if (token) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { AppSidebar } from "@/components/AppSideBar";
-import { ReactNode, Suspense, useEffect } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getUserPermissions } from "@/lib/permissions";
 
@@ -19,13 +19,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const pageTitle = getPageTitle(pathname || "");
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const perms = getUserPermissions();
-    if (!perms.canAccessAdminPanel && !perms.isAdmin) {
+    if (!perms.isAdmin) {
       router.push("/workspaces");
+    } else {
+      setIsAuthorized(true);
     }
   }, [pathname, router]);
+
+  if (!isAuthorized) return null;
 
   return (
     <div className="flex h-screen bg-[#f6f9fc] overflow-hidden">

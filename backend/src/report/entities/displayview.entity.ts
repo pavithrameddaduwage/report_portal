@@ -17,7 +17,6 @@ export class DisplayView{
     @OneToMany(()=>DisplayViewColumns,dvc=>dvc.displayview,  {
         cascade: ['insert', 'update'],
         orphanedRowAction: 'delete',
-        eager: true,
       },)
     displayview_columns:DisplayViewColumns[]
 

@@ -25,6 +25,19 @@ export default function WorkspacesPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const refresh = () => {
+      const token = localStorage.getItem("access_token");
+      if (token) getAllWorkspaces(jwtDecode(token));
+    };
+    const interval = window.setInterval(refresh, 10000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
   const getAllWorkspaces = async (decodedUser: any) => {
     try {
       setLoading(true);
@@ -40,18 +53,32 @@ export default function WorkspacesPage() {
 
       // Fetch user details and workspaces in parallel for fast loading
       const [userRes, wsRes] = await Promise.allSettled([
-        email ? findUserByEmail({ email }) : Promise.resolve(null),
+        email ? findUserByEmail({ email, userid: decodedUser?.userid }) : Promise.resolve(null),
         findAllWorkspaces(),
       ]);
 
       let userDb: any = null;
       if (userRes.status === "fulfilled" && userRes.value?.status === 200) {
-        userDb = userRes.value.data;
+        const userPayload = userRes.value.data;
+        userDb = userPayload?.data || userPayload;
       }
 
       let rawWorkspaces: any[] = [];
       if (wsRes.status === "fulfilled" && wsRes.value?.status === 200) {
-        rawWorkspaces = wsRes.value.data || [];
+        const workspacePayload = wsRes.value.data;
+        const workspaceData = workspacePayload?.data || workspacePayload;
+        rawWorkspaces = Array.isArray(workspaceData)
+          ? workspaceData
+          : workspaceData && typeof workspaceData === "object"
+          ? [workspaceData]
+          : [];
+      }
+
+      if (rawWorkspaces.length === 0 && userDb?.workspaces?.length) {
+        rawWorkspaces = userDb.workspaces.map((workspace: any) => ({
+          ...workspace,
+          reports: [],
+        }));
       }
 
       const userRoles: string[] = (userDb?.role ? userDb.role.split(',') : [rawRole]).map((r: string) => r.trim().toLowerCase());

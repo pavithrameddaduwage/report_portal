@@ -39,7 +39,7 @@ export function AppSidebar() {
   useEffect(() => {
     const perms = getUserPermissions();
     setPermissions(perms);
-    loadWorkspaces(perms.user?.email || "");
+    loadWorkspaces(perms.user?.email || "", perms.user?.userid || "");
   }, []);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function AppSidebar() {
     setPermissions(perms);
   }, [pathname]);
 
-  const loadWorkspaces = async (email: string) => {
+  const loadWorkspaces = async (email: string, userid: string) => {
     try {
       const perms = getUserPermissions();
       let wsData = [];
@@ -55,7 +55,12 @@ export function AppSidebar() {
       if (perms.isAdmin) {
         const wsRes = await findAllWorkspaces();
         if (wsRes.status === 200) {
-          wsData = wsRes.data || [];
+          const workspaceData = wsRes.data;
+          wsData = Array.isArray(workspaceData)
+            ? workspaceData
+            : workspaceData && typeof workspaceData === 'object'
+            ? [workspaceData]
+            : [];
           wsData = wsData.map((ws: any) => ({
             ...ws,
             reports: (ws.reports || []).map((rpt: any) => ({ ...rpt, authorized: true })),
@@ -63,7 +68,7 @@ export function AppSidebar() {
         }
       } else if (email) {
         const [userRes, allWsRes] = await Promise.all([
-          findUserByEmail({ email }),
+          findUserByEmail({ email, userid }),
           findAllWorkspaces(),
         ]);
 
@@ -72,6 +77,8 @@ export function AppSidebar() {
           const userWs = userData.workspaces || [];
           const userReports = userData.reports || [];
           const userDisplayViews = userData.displayviews || [];
+          const userRoles = String(userData.role || '').split(',').map((role: string) => role.trim().toLowerCase());
+          const isSuperUser = userRoles.includes('super user') || userRoles.includes('superuser');
 
           const assignedWsIds = userWs.map((w: any) => Number(w.id));
           const assignedRptIds = [
@@ -79,10 +86,17 @@ export function AppSidebar() {
             ...userDisplayViews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((id: any) => !isNaN(Number(id)) && Number(id) > 0),
           ];
 
-          wsData = (allWsRes.data || [])
+          const workspaceData = Array.isArray(allWsRes.data)
+            ? allWsRes.data
+            : allWsRes.data && typeof allWsRes.data === 'object'
+            ? [allWsRes.data]
+            : [];
+
+          wsData = workspaceData
             .map((ws: any) => {
               const wsIdNum = Number(ws.id);
-              const hasWsAccess = assignedWsIds.includes(wsIdNum);
+              const wsName = String(ws.name || '').toLowerCase();
+              const hasWsAccess = isSuperUser || userRoles.some((role: string) => role.includes(wsName) || role === `${wsName} wsmember`) || assignedWsIds.includes(wsIdNum);
 
               const authorizedReports = (ws.reports || [])
                 .filter((r: any) => hasWsAccess || assignedRptIds.includes(Number(r.id)))
@@ -151,7 +165,7 @@ export function AppSidebar() {
             <span>Workspaces</span>
           </Link>
 
-          {(permissions.canAccessAdminPanel || permissions.isAdmin || isAdminRoute) && (
+          {permissions.isAdmin && (
             <Link
               href={
                 permissions.canConfigureReports

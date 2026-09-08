@@ -30,6 +30,7 @@ import {
   findAllReports,
 } from "@/services/report-service";
 import { getColumnListBySchemaAndView } from "@/services/datawarehouse-service";
+import { useData } from "@/context/DataContext";
 import {
   Select,
   SelectContent,
@@ -158,6 +159,7 @@ const reportSchema = z.object({
 });
 
 const ReportConfiguration = () => {
+  const { fetchReports: refreshReports, fetchWorkspaces: refreshWorkspaces } = useData();
   const [selectedReport, setSelectedReport] = useState<any>({});
   const [workspaces, setWorkspaces] = useState<any>([]);
   const [columns, setColumns] = useState<any[]>([]);
@@ -241,7 +243,7 @@ const ReportConfiguration = () => {
         setColumns([]);
         form.reset();
         setVerifyStatus(0);
-        fetchReports();
+        await Promise.all([fetchReports(), refreshReports(true), refreshWorkspaces(true)]);
         toast.success(selectedReport?.id ? "Report updated" : "Report saved");
       }
     } catch (error: any) {

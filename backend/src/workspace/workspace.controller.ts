@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, Post } from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
 import { Public } from 'src/auth/decorators/public.decorator';
 
@@ -14,6 +14,8 @@ export class WorkspaceController {
 
 
   @Public()
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  @Header('Pragma', 'no-cache')
   @Get('findAllWorkspaces')
   findAllWorkspaces(){
     return this.workspaceService.findAllWorkspaces()

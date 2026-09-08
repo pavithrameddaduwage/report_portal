@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { DataSource, ILike, Repository } from 'typeorm';
+import { DataSource, ILike, In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { RoleMaster } from './entities/role_master.entity';
@@ -140,27 +140,22 @@ export class UsersService implements OnModuleInit {
   }
 
   async createUser(user: any) {
-    let reports: Report[] = [];
-    let workspaces: Workspace[] = [];
-    let displayviews: DisplayView[] = [];
+    const normalizeIds = (values: any) => [...new Set((Array.isArray(values) ? values : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0))];
+    const reportIds = normalizeIds(user.reportIds);
+    const workspaceIds = normalizeIds(user.workspaceIds);
+    const displayviewIds = normalizeIds(user.displayviewIds);
 
-    (user.reportIds || []).forEach((f: any) => {
-      if (f) {
-        reports.push({ id: Number(f) } as Report);
-      }
-    });
+    const [validReports, validWorkspaces, validDisplayviews] = await Promise.all([
+      reportIds.length ? this.userRepository.manager.getRepository(Report).findBy({ id: In(reportIds) }) : [],
+      workspaceIds.length ? this.userRepository.manager.getRepository(Workspace).findBy({ id: In(workspaceIds) }) : [],
+      displayviewIds.length ? this.userRepository.manager.getRepository(DisplayView).findBy({ id: In(displayviewIds) }) : [],
+    ]);
 
-    (user.workspaceIds || []).forEach((f: any) => {
-      if (f) {
-        workspaces.push({ id: Number(f) } as Workspace);
-      }
-    });
-
-    (user.displayviewIds || []).forEach((f: any) => {
-      if (f) {
-        displayviews.push({ id: Number(f) } as DisplayView);
-      }
-    });
+    const reports: Report[] = validReports.map(({ id }) => ({ id } as Report));
+    const workspaces: Workspace[] = validWorkspaces.map(({ id }) => ({ id } as Workspace));
+    const displayviews: DisplayView[] = validDisplayviews.map(({ id }) => ({ id } as DisplayView));
 
     let userEntity: User;
     if (user.id && Number(user.id) > 0) {
@@ -177,19 +172,51 @@ export class UsersService implements OnModuleInit {
         })) || new User();
     }
 
+    const previousWorkspaceIds = (userEntity.workspaces || []).map(({ id }) => id);
+    const previousReportIds = (userEntity.reports || []).map(({ id }) => id);
+    const previousDisplayviewIds = (userEntity.displayviews || []).map(({ id }) => id);
+    const addWorkspaceIds = workspaceIds.filter((id) => !previousWorkspaceIds.includes(id));
+    const addReportIds = reportIds.filter((id) => !previousReportIds.includes(id));
+    const addDisplayviewIds = displayviewIds.filter((id) => !previousDisplayviewIds.includes(id));
+    const removeWorkspaceIds = previousWorkspaceIds.filter((id) => !workspaceIds.includes(id));
+    const removeReportIds = previousReportIds.filter((id) => !reportIds.includes(id));
+    const removeDisplayviewIds = previousDisplayviewIds.filter((id) => !displayviewIds.includes(id));
+
     userEntity.name = user.name;
     userEntity.email = user.email;
     if (user.is_active !== undefined) {
       userEntity.is_active = Boolean(user.is_active);
     }
-    if (user.workspaceIds !== undefined) userEntity.workspaces = workspaces;
-    if (user.reportIds !== undefined) userEntity.reports = reports;
-    if (user.displayviewIds !== undefined) userEntity.displayviews = displayviews;
+    userEntity.workspaces = undefined as any;
+    userEntity.reports = undefined as any;
+    userEntity.displayviews = undefined as any;
     const roleList = (user.role || '').split(',').map((r: string) => r.trim().toLowerCase());
     userEntity.is_admin = user.is_admin === true || roleList.includes('admin');
     userEntity.role = user.role || (userEntity.is_admin ? 'Admin' : 'User');
 
     const output = await this.userRepository.save(userEntity);
+
+    if (user.workspaceIds !== undefined && (workspaces.length > 0 || previousWorkspaceIds.length > 0)) {
+      await this.userRepository
+        .createQueryBuilder()
+        .relation(User, 'workspaces')
+        .of(output.id)
+        .addAndRemove(addWorkspaceIds, removeWorkspaceIds);
+    }
+    if (user.reportIds !== undefined && (reports.length > 0 || previousReportIds.length > 0)) {
+      await this.userRepository
+        .createQueryBuilder()
+        .relation(User, 'reports')
+        .of(output.id)
+        .addAndRemove(addReportIds, removeReportIds);
+    }
+    if (user.displayviewIds !== undefined && (displayviews.length > 0 || previousDisplayviewIds.length > 0)) {
+      await this.userRepository
+        .createQueryBuilder()
+        .relation(User, 'displayviews')
+        .of(output.id)
+        .addAndRemove(addDisplayviewIds, removeDisplayviewIds);
+    }
 
     let roles = [];
     if (userEntity.is_admin) {
@@ -223,9 +250,18 @@ export class UsersService implements OnModuleInit {
     }
   }
 
-  async findUserByEmail(email: string) {
+  async findUserByEmail(email: string, userId?: string) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const username = String(userId || normalizedEmail.split('@')[0]).trim().toLowerCase();
+
     return this.userRepository.findOne({
-      where: { email: ILike(email) },
+      where: [
+        { email: ILike(normalizedEmail) },
+        ...(username ? [
+          { email: ILike(`${username}@hgusa.com`) },
+          { email: ILike(`${username}@horizongroupusa.com`) },
+        ] : []),
+      ],
       relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report'],
     });
   }

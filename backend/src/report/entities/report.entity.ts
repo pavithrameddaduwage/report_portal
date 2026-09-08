@@ -23,7 +23,7 @@ export class Report {
   @ManyToOne(()=>Workspace,workspace=>workspace.reports)
   workspace: Workspace;
 
-  @OneToMany(()=>ReportColumns,rc=>rc.report,{cascade:true,eager:true,  orphanedRowAction: 'delete',})
+  @OneToMany(()=>ReportColumns,rc=>rc.report,{cascade:true,  orphanedRowAction: 'delete',})
   columns:ReportColumns[]
 
   @ManyToMany(()=>User,usr=>usr.reports,{cascade:false})

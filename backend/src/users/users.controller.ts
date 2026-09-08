@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Header, HttpCode, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { Public } from 'src/auth/decorators/public.decorator';
 
@@ -7,15 +7,20 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Public()
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  @Header('Pragma', 'no-cache')
   @Get('findAllUsers')
   findAllUsers() {
     return this.usersService.findAllUsers();
   }
 
   @Public()
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  @Header('Pragma', 'no-cache')
+  @HttpCode(HttpStatus.OK)
   @Post('findUserByEmail')
-  findUserByEmail(@Body() data: { email: any }) {
-    return this.usersService.findUserByEmail(data.email);
+  findUserByEmail(@Body() data: { email: any; userid?: string }) {
+    return this.usersService.findUserByEmail(data.email, data.userid);
   }
 
   @Public()
