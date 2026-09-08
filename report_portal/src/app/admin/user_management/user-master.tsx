@@ -97,29 +97,8 @@ const UserMaster = () => {
     }
   };
 
-  // Existing Users Pagination & Search state
+  // Existing Users Search state
   const [tableSearch, setTableSearch] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(6);
-
-  useEffect(() => {
-    const updatePageSize = () => {
-      const h = window.innerHeight;
-      if (h >= 1050) {
-        setPageSize(14);
-      } else if (h >= 900) {
-        setPageSize(10);
-      } else if (h >= 750) {
-        setPageSize(8);
-      } else {
-        setPageSize(6);
-      }
-    };
-
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
 
   // AD Suggestions state
   const [adSuggestions, setAdSuggestions] = useState<any[]>([]);
@@ -399,11 +378,6 @@ const UserMaster = () => {
     return nameMatch || emailMatch || roleMatch;
   });
 
-  const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * pageSize;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
-
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
       
@@ -537,42 +511,43 @@ const UserMaster = () => {
               </Button>
             )}
             <div className="relative w-64">
-              <Input value={tableSearch} onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }} placeholder="Search users..." className="h-8 text-xs border-[#dce6f1] pl-8" />
+              <Input value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} placeholder="Search users..." className="h-8 text-xs border-[#dce6f1] pl-8" />
               <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5" />
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto w-full">
+        {/* Scrollable Table Container for 25+ rows with Sticky Header */}
+        <div className="overflow-y-auto max-h-[620px] overflow-x-auto w-full border border-[#dce6f1] rounded-lg shadow-2xs">
           <Table className="text-xs">
-            <TableHeader className="bg-[#edf4fa]">
-              <TableRow className="border-[#dce6f1]">
-                <TableHead className="w-[40px] text-center">
+            <TableHeader className="bg-[#edf4fa] sticky top-0 z-10 shadow-2xs">
+              <TableRow className="border-[#dce6f1] bg-[#edf4fa]">
+                <TableHead className="w-[40px] text-center bg-[#edf4fa]">
                   <input 
                     type="checkbox" 
                     className="rounded border-[#c8dced] text-[#2f8fe0]" 
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setBulkSelectedUserIds(paginatedUsers.map(u => u.userid || u.id));
+                        setBulkSelectedUserIds(filteredUsers.map(u => u.userid || u.id));
                       } else {
                         setBulkSelectedUserIds([]);
                       }
                     }}
-                    checked={paginatedUsers.length > 0 && bulkSelectedUserIds.length === paginatedUsers.length}
+                    checked={filteredUsers.length > 0 && bulkSelectedUserIds.length === filteredUsers.length}
                   />
                 </TableHead>
-                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Full Name</TableHead>
-                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Email</TableHead>
-                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">User Roles</TableHead>
-                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Assigned Workspaces & Reports</TableHead>
-                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Actions</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 bg-[#edf4fa]">Full Name</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 bg-[#edf4fa]">Email</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 bg-[#edf4fa]">User Roles</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 bg-[#edf4fa]">Assigned Workspaces & Reports</TableHead>
+                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 bg-[#edf4fa]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-[#5c7f9f]">No users found.</TableCell></TableRow>
+              {filteredUsers.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-[#5c7f9f]">No users found.</TableCell></TableRow>
               ) : (
-                paginatedUsers.map((u: any) => {
+                filteredUsers.map((u: any) => {
                   const roles = (
                     u.user_roles && u.user_roles.length > 0
                       ? u.user_roles.map((ur: any) => ur.role?.role).filter(Boolean)
@@ -646,16 +621,6 @@ const UserMaster = () => {
             </TableBody>
           </Table>
         </div>
-
-        {filteredUsers.length > 0 && (
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#edf3f9] text-[11px]">
-            <span className="text-[#5c7f9f]">Showing {startIndex + 1} to {Math.min(startIndex + pageSize, filteredUsers.length)} of {filteredUsers.length}</span>
-            <div className="flex gap-1.5">
-               <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safeCurrentPage <= 1} className="h-7 text-xs"><ChevronLeft className="w-3.5 h-3.5" /></Button>
-               <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={safeCurrentPage >= totalPages} className="h-7 text-xs"><ChevronRight className="w-3.5 h-3.5" /></Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Permissions Wizard Modal */}
