@@ -179,9 +179,9 @@ export default function WorkspacesPage() {
   };
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full flex-1 flex flex-col min-h-0">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 shrink-0">
         <div>
           <span className="text-[11px] font-bold text-[#2f8fe0] tracking-wider block mb-0.5">
             Report Portal
@@ -230,18 +230,18 @@ export default function WorkspacesPage() {
           No workspaces or authorized reports found.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 w-full ${displayworkspaces.length <= 2 ? "flex-1 min-h-0 mb-2" : ""}`}>
           {displayworkspaces.map((workspace: any) => {
             const authReports = (workspace.reports || []).filter((r: any) => r.authorized !== false);
 
             return (
               <div 
                 key={workspace.id} 
-                className="bg-white rounded-xl border border-[#dce6f1] shadow-2xs hover:shadow-md hover:border-[#2f8fe0] transition-all p-4.5 flex flex-col justify-between"
+                className={`bg-white rounded-xl border border-[#dce6f1] shadow-2xs hover:shadow-md hover:border-[#2f8fe0] transition-all p-4.5 flex flex-col justify-between ${displayworkspaces.length <= 2 ? "h-full min-h-0" : ""}`}
               >
-                <div>
+                <div className="flex-1 flex flex-col min-h-0">
                   {/* Card Header with Heading & Badge on same level */}
-                  <div className="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b border-[#f0f6fc]">
+                  <div className="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b border-[#f0f6fc] shrink-0">
                     <h3 className="font-bold text-base sm:text-lg text-[#0a1c30] truncate" title={workspace.name}>
                       {workspace.name}
                     </h3>
@@ -251,7 +251,7 @@ export default function WorkspacesPage() {
                   </div>
 
                   {/* Reports List inside Card (2 per row, clean layout without outlines/shadings) */}
-                  <div className={`my-1 overflow-y-auto pr-1 ${displayworkspaces.length <= 2 ? "min-h-[420px] max-h-[650px]" : "min-h-[250px] max-h-[380px]"}`}>
+                  <div className={`my-1 overflow-y-auto pr-1 ${displayworkspaces.length <= 2 ? "flex-1 min-h-0" : "min-h-[250px] max-h-[380px]"}`}>
                     {authReports.length === 0 ? (
                       <div className="h-full flex items-center justify-center py-8">
                         <span className="text-[11px] text-[#8aa6bf] italic">
