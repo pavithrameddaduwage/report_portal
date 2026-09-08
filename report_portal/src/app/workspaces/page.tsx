@@ -6,7 +6,7 @@ import { findAllWorkspaces } from "@/services/workspace-services";
 import { findUserByEmail } from "@/services/user-service";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
-import { Search, Home, FileText, ArrowRight, Folder, Loader2, Eye } from "lucide-react";
+import { Search, Home, FileText, ArrowRight, Folder, Loader2, Eye, X } from "lucide-react";
 
 export default function WorkspacesPage() {
   const router = useRouter(); 
@@ -199,9 +199,22 @@ export default function WorkspacesPage() {
               placeholder="Search reports or workspaces..."
               value={searchQuery}
               onChange={handleReportSearch}
-              className="border border-[#dce6f1] rounded-md text-xs h-8 pl-8 pr-3 w-64 bg-white text-[#0f2b48] placeholder:text-[#8aa6bf] focus:outline-none focus:border-[#2f8fe0] shadow-2xs"
+              className="border border-[#dce6f1] rounded-md text-xs h-8 pl-8 pr-8 w-64 bg-white text-[#0f2b48] placeholder:text-[#8aa6bf] focus:outline-none focus:border-[#2f8fe0] shadow-2xs"
             />
             <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setDisplayWorkspaces(workspaces);
+                }}
+                className="absolute right-2.5 top-2.5 text-[#8aa6bf] hover:text-[#0a1c30] transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>

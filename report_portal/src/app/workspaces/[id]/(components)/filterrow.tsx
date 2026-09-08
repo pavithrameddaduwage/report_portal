@@ -9,6 +9,8 @@ import NumberRangePicker from "./numberrangepicker";
 import DropdownPicker from "./dropdownpicker";
 import { getItemsforDropdown } from "@/services/datawarehouse-service";
 
+import { X } from "lucide-react";
+
 const FilterComponent = ({ filterType, filterValue, filterColumn, view, schema, onChange }: any) => {
   const [columns, setColumns] = useState<string[]>([]);
 
@@ -39,16 +41,30 @@ const FilterComponent = ({ filterType, filterValue, filterColumn, view, schema, 
           onChange={onChange}
         />
       );
-    default:
+    default: {
+      const val = filterValue?.value !== undefined ? filterValue.value : "";
       return (
-        <Input
-          type="text"
-          value={filterValue?.value !== undefined ? filterValue.value : ""}
-          placeholder="Filter..."
-          onChange={(e) => onChange(e.target.value)}
-          className="text-[12px] h-7 w-full rounded-md border border-[#dce6f1] bg-white px-2 text-[#0f2b48] placeholder:text-[#8aa6bf] shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0]"
-        />
+        <div className="relative w-full">
+          <Input
+            type="text"
+            value={val}
+            placeholder="Filter..."
+            onChange={(e) => onChange(e.target.value)}
+            className={`text-[12px] h-7 w-full rounded-md border border-[#dce6f1] bg-white pl-2 ${val ? "pr-6" : "pr-2"} text-[#0f2b48] placeholder:text-[#8aa6bf] shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0]`}
+          />
+          {val && (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="absolute right-1.5 top-1.5 text-[#8aa6bf] hover:text-[#0a1c30] transition-colors"
+              title="Clear filter"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       );
+    }
   }
 };
 

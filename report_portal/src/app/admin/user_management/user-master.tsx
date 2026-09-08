@@ -405,12 +405,27 @@ const UserMaster = () => {
                   {isSearchingAD && <span className="text-[11px] text-[#2f8fe0]"><Loader2 className="w-3 h-3 animate-spin inline mr-1" />Searching AD</span>}
                 </FormLabel>
                 <FormControl>
-                  <Input 
-                    {...field} 
-                    onChange={(e) => handleEmailChange(e.target.value, field.onChange)} 
-                    placeholder="Type user email (e.g. john.doe@hgusa.com)..." 
-                    className="h-8 text-xs border-[#dce6f1] rounded-md shadow-2xs focus-visible:ring-[#2f8fe0]" 
-                  />
+                  <div className="relative">
+                    <Input 
+                      {...field} 
+                      onChange={(e) => handleEmailChange(e.target.value, field.onChange)} 
+                      placeholder="Type user email (e.g. john.doe@hgusa.com)..." 
+                      className="h-8 text-xs border-[#dce6f1] rounded-md shadow-2xs focus-visible:ring-[#2f8fe0] pr-8" 
+                    />
+                    {field.value && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("");
+                          handleEmailChange("", field.onChange);
+                        }}
+                        className="absolute right-2.5 top-2.5 text-[#8aa6bf] hover:text-[#0a1c30] transition-colors cursor-pointer"
+                        title="Clear email"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </FormControl>
                 
                 {showSuggestions && adSuggestions.length > 0 && (
@@ -511,8 +526,18 @@ const UserMaster = () => {
               </Button>
             )}
             <div className="relative w-64">
-              <Input value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} placeholder="Search users..." className="h-8 text-xs border-[#dce6f1] pl-8" />
-              <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5" />
+              <Input value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} placeholder="Search users..." className="h-8 text-xs border-[#dce6f1] pl-8 pr-8" />
+              <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5 pointer-events-none" />
+              {tableSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTableSearch("")}
+                  className="absolute right-2.5 top-2.5 text-[#8aa6bf] hover:text-[#0a1c30] transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>

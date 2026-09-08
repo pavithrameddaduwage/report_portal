@@ -706,10 +706,19 @@ export default function ReportSchedulerView() {
                   placeholder="Search schedules..."
                   value={schedulesSearchQuery}
                   onChange={(e) => setSchedulesSearchQuery(e.target.value)}
-                  className="h-9 text-xs pl-8 border-[#dce6f1] rounded-lg"
+                  className="h-9 text-xs pl-8 pr-8 border-[#dce6f1] rounded-lg"
                 />
-
                 <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-3 pointer-events-none" />
+                {schedulesSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSchedulesSearchQuery("")}
+                    className="absolute right-2.5 top-3 text-[#8aa6bf] hover:text-[#0b2138] transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -868,9 +877,19 @@ export default function ReportSchedulerView() {
                     placeholder="Search logs..."
                     value={logsSearchQuery}
                     onChange={(e) => setLogsSearchQuery(e.target.value)}
-                    className="h-9 text-xs pl-8 border-[#dce6f1] rounded-lg"
+                    className="h-9 text-xs pl-8 pr-8 border-[#dce6f1] rounded-lg"
                   />
                   <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-3 pointer-events-none" />
+                  {logsSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setLogsSearchQuery("")}
+                      className="absolute right-2.5 top-3 text-[#8aa6bf] hover:text-[#0b2138] transition-colors cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 <Select value={logsStatusFilter} onValueChange={setLogsStatusFilter}>
@@ -1274,12 +1293,24 @@ export default function ReportSchedulerView() {
                         onFocus={() => {
                           if (adSuggestions.length > 0) setShowSuggestions(true);
                         }}
-                        className="h-10 text-xs pl-9 border-[#dce6f1] rounded-xl shadow-2xs"
+                        className="h-10 text-xs pl-9 pr-9 border-[#dce6f1] rounded-xl shadow-2xs"
                       />
                       <Search className="w-4 h-4 text-[#8aa6bf] absolute left-3 top-3 pointer-events-none" />
-                      {isSearchingAD && (
+                      {isSearchingAD ? (
                         <Loader2 className="w-4 h-4 text-[#2f8fe0] animate-spin absolute right-3 top-3" />
-                      )}
+                      ) : adSearchQuery ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdSearchQuery("");
+                            setShowSuggestions(false);
+                          }}
+                          className="absolute right-3 top-3 text-[#8aa6bf] hover:text-[#0b2138] transition-colors cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      ) : null}
                     </div>
 
                     <Button

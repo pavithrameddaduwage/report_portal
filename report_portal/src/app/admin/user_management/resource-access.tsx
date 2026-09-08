@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Shield, FileText, Users, ChevronRight, ChevronDown } from "lucide-react";
+import { Search, Shield, FileText, Users, ChevronRight, ChevronDown, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { assignUsersToWorkspace } from "@/services/workspace-services";
 import { assignUsersToReport, assignUsersToDisplayView } from "@/services/report-service";
@@ -196,9 +196,19 @@ export default function ResourceAccess() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search reports..."
-              className="h-8 text-xs border-[#dce6f1] pl-8 bg-white"
+              className="h-8 text-xs border-[#dce6f1] pl-8 pr-8 bg-white"
             />
             <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-[#8aa6bf] hover:text-[#0a1c30] transition-colors"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -340,9 +350,19 @@ export default function ResourceAccess() {
                 value={userSearchQuery}
                 onChange={(e) => setUserSearchQuery(e.target.value)}
                 placeholder="Search user name or email..."
-                className="h-8 text-xs border-[#c8dced] pl-8 bg-white"
+                className="h-8 text-xs border-[#c8dced] pl-8 pr-8 bg-white"
               />
               <Search className="w-3.5 h-3.5 text-[#8aa6bf] absolute left-2.5 top-2.5 pointer-events-none" />
+              {userSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setUserSearchQuery("")}
+                  className="absolute right-2.5 top-2.5 text-[#8aa6bf] hover:text-[#0a1c30] transition-colors"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <Button
