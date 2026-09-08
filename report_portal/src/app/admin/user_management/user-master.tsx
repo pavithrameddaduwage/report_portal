@@ -9,11 +9,11 @@ import { findAllWorkspaces } from "@/services/workspace-services";
 import { searchADUsers } from "@/services/authentication-service";
 import { findAllDisplayViews } from "@/services/report-service";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users, X, Check, Shield, UserPlus } from "lucide-react";
+import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, ChevronDown, Users, X, Check, Shield, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useData } from "@/context/DataContext";
@@ -46,10 +46,46 @@ const UserMaster = () => {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkSelectedUserIds, setBulkSelectedUserIds] = useState<number[]>([]);
 
+  // Memoized O(1) Lookups for instant UI responsiveness
+  const displayViewsByReportId = useMemo(() => {
+    const map: Record<number, any[]> = {};
+    (allDisplayViews || []).forEach((dv: any) => {
+      const rId = dv.report?.id;
+      if (rId) {
+        if (!map[rId]) map[rId] = [];
+        map[rId].push(dv);
+      }
+    });
+    return map;
+  }, [allDisplayViews]);
+
+  const selectedWsSet = useMemo(() => new Set(selectedWorkspaceIds), [selectedWorkspaceIds]);
+  const selectedRptSet = useMemo(() => new Set(selectedReportIds), [selectedReportIds]);
+  const selectedDvSet = useMemo(() => new Set(selectedDisplayViewIds), [selectedDisplayViewIds]);
+
   // Existing Users Pagination & Search state
   const [tableSearch, setTableSearch] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const PAGE_SIZE = 6;
+  const [pageSize, setPageSize] = useState<number>(6);
+
+  useEffect(() => {
+    const updatePageSize = () => {
+      const h = window.innerHeight;
+      if (h >= 1050) {
+        setPageSize(14);
+      } else if (h >= 900) {
+        setPageSize(10);
+      } else if (h >= 750) {
+        setPageSize(8);
+      } else {
+        setPageSize(6);
+      }
+    };
+
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   // AD Suggestions state
   const [adSuggestions, setAdSuggestions] = useState<any[]>([]);
@@ -212,6 +248,8 @@ const UserMaster = () => {
     setSelectedWorkspaceIds(userWsIds);
     setSelectedReportIds(userRptIds);
     setSelectedDisplayViewIds(userDvIds);
+    setIsBulkMode(false);
+    setIsAccessModalOpen(true);
   };
 
   const handleCancel = () => {
@@ -236,51 +274,70 @@ const UserMaster = () => {
     } catch (error) { toast.error("Failed to delete user"); }
   };
 
+  const [expandedWorkspacesInModal, setExpandedWorkspacesInModal] = useState<Record<number, boolean>>({});
+  const [expandedReportViewsInModal, setExpandedReportViewsInModal] = useState<Record<number, boolean>>({});
+
+  const toggleWorkspaceExpand = (wsId: number) => {
+    setExpandedWorkspacesInModal(prev => ({ ...prev, [wsId]: !prev[wsId] }));
+  };
+
+  const toggleReportViewsExpand = (rptId: number) => {
+    setExpandedReportViewsInModal(prev => ({ ...prev, [rptId]: !prev[rptId] }));
+  };
+
   // Checkbox handlers for the Modal Grid
   const handleToggleWorkspace = (wsId: number) => {
-     if (selectedWorkspaceIds.includes(wsId)) {
-        setSelectedWorkspaceIds(prev => prev.filter(id => id !== wsId));
-        // Remove nested reports/views
-        const ws = rawWorkspaces.find(w => w.id === wsId);
-        const rptIds = (ws?.reports || []).map((r:any) => r.id);
-        setSelectedReportIds(prev => prev.filter(id => !rptIds.includes(id)));
+     const ws = rawWorkspaces.find((w: any) => w.id === wsId);
+     if (!ws) return;
+
+     const wsReports = ws.reports || [];
+     const wsReportIds = wsReports.map((r: any) => r.id);
+     const wsViewIds: number[] = [];
+     wsReports.forEach((r: any) => {
+       wsViewIds.push(0 - r.id);
+       const customDvs = displayViewsByReportId[r.id] || [];
+       customDvs.forEach((dv: any) => wsViewIds.push(dv.id));
+     });
+
+     const isExplicit = selectedWsSet.has(wsId);
+     const hasReportsSelected = wsReportIds.some((rId: number) => selectedRptSet.has(rId));
+     const hasViewsSelected = wsViewIds.some((vId: number) => selectedDvSet.has(vId));
+     const isCurrentlyActive = isExplicit || hasReportsSelected || hasViewsSelected;
+
+     if (isCurrentlyActive) {
+        const wsRptSet = new Set(wsReportIds);
+        const wsVSet = new Set(wsViewIds);
+        setSelectedWorkspaceIds(prev => prev.filter((id: number) => id !== wsId));
+        setSelectedReportIds(prev => prev.filter((id: number) => !wsRptSet.has(id)));
+        setSelectedDisplayViewIds(prev => prev.filter((id: number) => !wsVSet.has(id)));
      } else {
-        setSelectedWorkspaceIds(prev => [...prev, wsId]);
+        setSelectedWorkspaceIds(prev => [...new Set([...prev, wsId])]);
+        setSelectedReportIds(prev => [...new Set([...prev, ...wsReportIds])]);
+        setSelectedDisplayViewIds(prev => [...new Set([...prev, ...wsViewIds])]);
      }
   };
   
-  const handleToggleReport = (rptId: number) => {
-     if (selectedReportIds.includes(rptId)) {
-        setSelectedReportIds(prev => prev.filter(id => id !== rptId));
+  const handleToggleReport = (rptId: number, wsId: number) => {
+     const customDvs = displayViewsByReportId[rptId] || [];
+     const rptViews = [0 - rptId, ...customDvs.map((dv: any) => dv.id)];
+
+     const isCurrentlyActive = selectedRptSet.has(rptId) || selectedWsSet.has(wsId);
+
+     if (isCurrentlyActive) {
+        const rptVSet = new Set(rptViews);
+        setSelectedReportIds(prev => prev.filter((id: number) => id !== rptId));
+        setSelectedDisplayViewIds(prev => prev.filter((id: number) => !rptVSet.has(id)));
      } else {
-        setSelectedReportIds(prev => [...prev, rptId]);
+        setSelectedReportIds(prev => [...new Set([...prev, rptId])]);
+        setSelectedDisplayViewIds(prev => [...new Set([...prev, ...rptViews])]);
      }
   };
 
-  const handleToggleView = (dvId: number, isDefault: boolean, reportId: number) => {
-     const relatedViews = allDisplayViews.filter(dv => dv.report?.id === reportId).map(dv => dv.id);
-     
-     if (isDefault) {
-         if (selectedDisplayViewIds.includes(dvId)) {
-             // Uncheck default
-             setSelectedDisplayViewIds(prev => prev.filter(id => id !== dvId));
-         } else {
-             // Check default -> uncheck all specific views for this report
-             setSelectedDisplayViewIds(prev => {
-                 const filtered = prev.filter(id => !relatedViews.includes(id));
-                 return [...filtered, dvId];
-             });
-         }
+  const handleToggleView = (dvId: number, reportId: number) => {
+     if (selectedDvSet.has(dvId)) {
+         setSelectedDisplayViewIds(prev => prev.filter((id: number) => id !== dvId));
      } else {
-         if (selectedDisplayViewIds.includes(dvId)) {
-             setSelectedDisplayViewIds(prev => prev.filter(id => id !== dvId));
-         } else {
-             // Check specific view -> uncheck default view for this report
-             setSelectedDisplayViewIds(prev => {
-                 const filtered = prev.filter(id => id !== (0 - reportId));
-                 return [...filtered, dvId];
-             });
-         }
+         setSelectedDisplayViewIds(prev => [...new Set([...prev, dvId])]);
      }
   };
 
@@ -293,10 +350,10 @@ const UserMaster = () => {
     return nameMatch || emailMatch || roleMatch;
   });
 
-  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + PAGE_SIZE);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
@@ -393,7 +450,7 @@ const UserMaster = () => {
                  id="isActive" 
                  checked={isActive} 
                  onChange={(e) => setIsActive(e.target.checked)} 
-                 className="rounded border-gray-300 text-[#2f8fe0] focus:ring-[#2f8fe0] w-4 h-4 cursor-pointer" 
+                 className="rounded border-[#c8dced] text-[#2f8fe0] focus:ring-[#2f8fe0] w-4 h-4 cursor-pointer" 
                />
                <label htmlFor="isActive" className="text-[12px] font-bold text-[#0d2745] cursor-pointer">Is Active</label>
             </div>
@@ -441,7 +498,7 @@ const UserMaster = () => {
                 <TableHead className="w-[40px] text-center">
                   <input 
                     type="checkbox" 
-                    className="rounded border-gray-300" 
+                    className="rounded border-[#c8dced] text-[#2f8fe0]" 
                     onChange={(e) => {
                       if (e.target.checked) {
                         setBulkSelectedUserIds(paginatedUsers.map(u => u.userid || u.id));
@@ -452,11 +509,11 @@ const UserMaster = () => {
                     checked={paginatedUsers.length > 0 && bulkSelectedUserIds.length === paginatedUsers.length}
                   />
                 </TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30]">FULL NAME</TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30]">EMAIL</TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30]">USER ROLES</TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30]">ASSIGNED WORKSPACES & REPORTS</TableHead>
-                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30]">ACTIONS</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Full Name</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Email</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">User Roles</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Assigned Workspaces & Reports</TableHead>
+                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -474,7 +531,7 @@ const UserMaster = () => {
                       <TableCell className="text-center">
                         <input 
                           type="checkbox" 
-                          className="rounded border-gray-300"
+                          className="rounded border-[#c8dced] text-[#2f8fe0]"
                           checked={bulkSelectedUserIds.includes(u.userid || u.id)}
                           onChange={(e) => {
                             const uid = u.userid || u.id;
@@ -535,7 +592,7 @@ const UserMaster = () => {
 
         {filteredUsers.length > 0 && (
           <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#edf3f9] text-[11px]">
-            <span className="text-[#5c7f9f]">Showing {startIndex + 1} to {Math.min(startIndex + PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length}</span>
+            <span className="text-[#5c7f9f]">Showing {startIndex + 1} to {Math.min(startIndex + pageSize, filteredUsers.length)} of {filteredUsers.length}</span>
             <div className="flex gap-1.5">
                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safeCurrentPage <= 1} className="h-7 text-xs"><ChevronLeft className="w-3.5 h-3.5" /></Button>
                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={safeCurrentPage >= totalPages} className="h-7 text-xs"><ChevronRight className="w-3.5 h-3.5" /></Button>
@@ -548,7 +605,7 @@ const UserMaster = () => {
       <Dialog open={isAccessModalOpen} onOpenChange={setIsAccessModalOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-xl border-[#dce6f1]">
           <DialogHeader className="p-5 border-b border-[#edf3f9] bg-[#f9fbff]">
-            <DialogTitle className="text-[15px] font-bold text-[#0a1c30]">User Access View</DialogTitle>
+            <DialogTitle className="text-[15px] font-bold text-[#0a1c30]">User Management</DialogTitle>
             <DialogDescription className="hidden">
             </DialogDescription>
           </DialogHeader>
@@ -561,66 +618,125 @@ const UserMaster = () => {
                    <Table className="text-xs">
                       <TableHeader className="bg-[#edf4fa] sticky top-0 z-10">
                          <TableRow className="border-[#dce6f1]">
-                            <TableHead className="font-bold text-[#0a1c30] w-[30%]">Sourcing Workspace</TableHead>
-                            <TableHead className="font-bold text-[#0a1c30] w-[30%]">Report</TableHead>
-                            <TableHead className="font-bold text-[#0a1c30] w-[40%]">Manage Permission (Views)</TableHead>
+                            <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 w-[30%]">Workspace</TableHead>
+                            <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 w-[30%]">Reports</TableHead>
+                            <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 w-[40%]">Views</TableHead>
                          </TableRow>
                       </TableHeader>
                       <TableBody>
-                         {rawWorkspaces.map(ws => (
-                            <React.Fragment key={ws.id}>
-                               <TableRow className="bg-[#fcfdfef0] border-[#dce6f1] hover:bg-[#f6fafc]">
-                                  <TableCell className="font-semibold text-[#0a1c30] align-top py-3">
-                                     <div className="flex items-center gap-2">
-                                        <input type="checkbox" checked={selectedWorkspaceIds.includes(ws.id)} onChange={() => handleToggleWorkspace(ws.id)} className="rounded border-gray-300 text-[#2f8fe0]" />
-                                        {ws.name}
-                                     </div>
-                                  </TableCell>
-                                  <TableCell colSpan={2} className="p-0 align-top">
-                                     {(ws.reports || []).length === 0 ? (
-                                        <div className="p-3 text-[#8aa6bf] italic">No reports</div>
-                                     ) : (
-                                        <div className="flex flex-col w-full h-full">
-                                           {ws.reports.map((rpt:any, i:number) => {
-                                              const rptViews = allDisplayViews.filter(dv => dv.report?.id === rpt.id);
-                                              return (
-                                                 <div key={rpt.id} className={`flex border-b border-[#edf3f9] last:border-0 ${i % 2 !== 0 ? 'bg-white' : 'bg-transparent'}`}>
-                                                    <div className="w-[43%] p-3 border-r border-[#edf3f9]">
-                                                       <div className="flex items-center gap-2">
-                                                          <input type="checkbox" checked={selectedReportIds.includes(rpt.id)} onChange={() => handleToggleReport(rpt.id)} className="rounded border-gray-300 text-[#2f8fe0]" />
-                                                          <span className="font-medium text-[#335375]">{rpt.report_name}</span>
-                                                       </div>
-                                                    </div>
-                                                    <div className="w-[57%] p-3">
-                                                       <div className="flex flex-col gap-2">
-                                                          {/* Default View Checkbox */}
-                                                          <label className="flex items-center gap-2 cursor-pointer group">
-                                                             <input type="checkbox" checked={selectedDisplayViewIds.includes(0 - rpt.id)} onChange={() => handleToggleView(0 - rpt.id, true, rpt.id)} className="rounded border-gray-300 text-[#2f8fe0]" />
-                                                             <span className="text-[11.5px] text-[#0a1c30] group-hover:text-[#2f8fe0] font-semibold">{rpt.report_name}</span>
-                                                          </label>
-                                                          
-                                                          {/* Specific Views */}
-                                                          {rptViews.length > 0 && (
-                                                             <div className="ml-5 flex flex-col gap-1.5 border-l-2 border-[#edf3f9] pl-3 py-1">
-                                                                {rptViews.map((dv:any) => (
-                                                                   <label key={dv.id} className="flex items-center gap-2 cursor-pointer group">
-                                                                      <input type="checkbox" checked={selectedDisplayViewIds.includes(dv.id)} onChange={() => handleToggleView(dv.id, false, rpt.id)} className="rounded border-gray-300 text-[#2f8fe0]" />
-                                                                      <span className="text-[11px] text-[#5c7f9f] group-hover:text-[#0a1c30] transition-colors">{dv.displayview_name}</span>
-                                                                   </label>
-                                                                ))}
-                                                             </div>
-                                                          )}
-                                                       </div>
-                                                    </div>
-                                                 </div>
-                                              )
-                                           })}
+                         {rawWorkspaces.map((ws: any) => {
+                            const wsReports = ws.reports || [];
+                            const wsReportIds = wsReports.map((r: any) => r.id);
+                            const wsAllViewIds = wsReports.flatMap((r: any) => [
+                              0 - r.id,
+                              ...allDisplayViews.filter((dv: any) => dv.report?.id === r.id).map((dv: any) => dv.id)
+                            ]);
+
+                            const isWsExplicit = selectedWorkspaceIds.includes(ws.id);
+                            const hasAnyReportSelectedInWs = wsReportIds.some((rId: number) => selectedReportIds.includes(rId));
+                            const hasAnyViewSelectedInWs = wsAllViewIds.some((vId: number) => selectedDisplayViewIds.includes(vId));
+
+                            const isWsChecked = isWsExplicit;
+                            const isWsDisabled = hasAnyReportSelectedInWs || hasAnyViewSelectedInWs;
+                            const isWsExpanded = expandedWorkspacesInModal[ws.id] === true;
+
+                            return (
+                               <React.Fragment key={ws.id}>
+                                  <TableRow className="bg-[#fcfdfef0] border-[#dce6f1] hover:bg-[#f6fafc]">
+                                     <TableCell colSpan={3} className="p-0">
+                                        {/* Workspace Row Bar */}
+                                        <div className="flex items-center justify-between p-3.5 bg-[#f6fafc] border-b border-[#edf3f9]">
+                                           <div className="flex items-center gap-2.5">
+                                              <button
+                                                 type="button"
+                                                 onClick={() => toggleWorkspaceExpand(ws.id)}
+                                                 className="p-1 hover:bg-[#e4eff8] rounded-md transition-colors text-[#5c7f9f] cursor-pointer"
+                                                 title={isWsExpanded ? "Collapse Reports" : "Expand Reports"}
+                                              >
+                                                 {isWsExpanded ? (
+                                                    <ChevronDown className="w-4 h-4 text-[#2f8fe0]" />
+                                                 ) : (
+                                                    <ChevronRight className="w-4 h-4" />
+                                                 )}
+                                              </button>
+                                              <input
+                                                 type="checkbox"
+                                                 checked={isWsChecked}
+                                                 disabled={isWsDisabled}
+                                                 onChange={() => handleToggleWorkspace(ws.id)}
+                                                 className="rounded border-[#c8dced] text-[#2f8fe0] disabled:opacity-80 cursor-pointer"
+                                              />
+                                              <span className="font-bold text-[#0a1c30] text-[13px]">{ws.name}</span>
+                                           </div>
+                                           <span className="text-[10px] font-bold bg-[#edf4fa] text-[#1e5f99] px-2.5 py-0.5 rounded-full border border-[#dce6f1]">
+                                              {wsReports.length} {wsReports.length === 1 ? 'Report' : 'Reports'}
+                                           </span>
                                         </div>
-                                     )}
-                                  </TableCell>
-                               </TableRow>
-                            </React.Fragment>
-                         ))}
+
+                                        {/* Collapsible Reports & Views List */}
+                                        {isWsExpanded && (
+                                           <div className="flex flex-col w-full bg-white divide-y divide-[#edf3f9]">
+                                              {wsReports.length === 0 ? (
+                                                 <div className="p-4 pl-12 text-[#8aa6bf] italic text-xs">No reports in this workspace</div>
+                                              ) : (
+                                                 wsReports.map((rpt: any) => {
+                                                    const customDvs = displayViewsByReportId[rpt.id] || [];
+                                                    const rptViews = [
+                                                       { id: 0 - rpt.id, name: rpt.report_name, isDefault: true },
+                                                       ...customDvs.map((dv: any) => ({ id: dv.id, name: dv.displayview_name, isDefault: false }))
+                                                    ];
+                                                    
+                                                    const isParentWsChecked = selectedWsSet.has(ws.id);
+                                                    const isRptExplicit = selectedRptSet.has(rpt.id);
+                                                    const isRptChecked = isRptExplicit || isParentWsChecked;
+                                                    const isRptDisabled = isParentWsChecked;
+
+                                                    return (
+                                                       <div key={rpt.id} className="flex items-start p-3 hover:bg-[#fbfdff] transition-colors border-b border-[#edf3f9]">
+                                                          {/* Workspace Column Spacer */}
+                                                          <div className="w-[30%] pl-8" />
+
+                                                          {/* Reports Column */}
+                                                          <div className="w-[35%] flex items-center gap-2.5 pr-3">
+                                                             <input
+                                                                type="checkbox"
+                                                                checked={isRptChecked}
+                                                                disabled={isRptDisabled}
+                                                                onChange={() => handleToggleReport(rpt.id, ws.id)}
+                                                                className="rounded border-[#c8dced] text-[#2f8fe0] disabled:opacity-80 cursor-pointer"
+                                                             />
+                                                             <span className="font-semibold text-[#0a1c30] text-[12px] truncate" title={rpt.report_name}>
+                                                                {rpt.report_name}
+                                                             </span>
+                                                          </div>
+
+                                                          {/* Views Column */}
+                                                          <div className="w-[35%] flex flex-col gap-1.5">
+                                                             {rptViews.map((v: any) => (
+                                                                <label key={v.id} className="flex items-center gap-2 cursor-pointer group py-0.5 select-none">
+                                                                   <input
+                                                                      type="checkbox"
+                                                                      checked={selectedDvSet.has(v.id)}
+                                                                      onChange={() => handleToggleView(v.id, rpt.id)}
+                                                                      className="rounded border-[#c8dced] text-[#2f8fe0] cursor-pointer"
+                                                                   />
+                                                                   <span className="text-[11px] font-medium text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate">
+                                                                      {v.name}
+                                                                   </span>
+                                                                </label>
+                                                             ))}
+                                                          </div>
+                                                       </div>
+                                                    );
+                                                 })
+                                              )}
+                                           </div>
+                                        )}
+                                     </TableCell>
+                                  </TableRow>
+                               </React.Fragment>
+                            );
+                         })}
                       </TableBody>
                    </Table>
                 </div>

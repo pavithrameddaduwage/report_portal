@@ -57,7 +57,7 @@ export const findAllRoles = async (): Promise<any> => {
     return response;
   } catch (error) {
     console.error(error);
-    return { status: 200, data: [{ id: 1, role: 'Admin' }, { id: 2, role: 'User' }, { id: 3, role: 'Viewer' }, { id: 4, role: 'Manager' }] };
+    return { status: 200, data: [{ id: 1, role: 'Admin' }, { id: 2, role: 'Super User' }, { id: 3, role: 'Workspace User' }] };
   }
 };
 

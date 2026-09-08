@@ -38,12 +38,13 @@ const Navbar = () => {
     }
   }, [pathname]);
 
-  const signingOut = async () => {
+  const signingOut = () => {
     try {
       localStorage.removeItem("access_token");
-      router.push("/login");
+      sessionStorage.clear();
+      window.location.href = "/login";
     } catch (error) {
-      router.push("/login");
+      window.location.href = "/login";
     }
   };
 
@@ -79,7 +80,7 @@ const Navbar = () => {
               key={item.href}
               href={item.href}
               className={cn(
-                "text-[12px] font-semibold tracking-wider transition-colors uppercase",
+                "text-[12px] font-semibold tracking-wider transition-colors",
                 isActive 
                   ? "text-[#00c0f3]" 
                   : "text-white/80 hover:text-white"

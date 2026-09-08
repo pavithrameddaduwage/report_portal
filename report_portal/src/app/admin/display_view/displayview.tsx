@@ -329,12 +329,12 @@ const DisplayView = () => {
               {/* Filters Table */}
               <div className="border border-[#c8dced] rounded-lg overflow-x-auto mt-3">
                 <Table className="text-xs min-w-[380px]">
-                  <TableHeader className="bg-[#dbe9f6]">
-                    <TableRow className="border-[#c8dced]">
-                      <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">COLUMN NAME</TableHead>
-                      <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">FILTER TYPE</TableHead>
-                      <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">PARAMETER</TableHead>
-                      <TableHead className="text-right text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ACTION</TableHead>
+                  <TableHeader className="bg-[#edf4fa]">
+                    <TableRow className="border-[#dce6f1]">
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Column Name</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Filter Type</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Parameter</TableHead>
+                      <TableHead className="text-right text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -393,11 +393,11 @@ const DisplayView = () => {
         <h2 className="text-[13px] font-bold text-[#0a1c30] mb-3">Existing display views</h2>
         <div className="overflow-x-auto w-full">
           <Table className="text-xs min-w-[340px]">
-            <TableHeader className="bg-[#dbe9f6]">
-              <TableRow className="border-[#c8dced]">
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">REPORT NAME</TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">DISPLAY VIEW</TableHead>
-                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ACTION</TableHead>
+            <TableHeader className="bg-[#edf4fa]">
+              <TableRow className="border-[#dce6f1]">
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Report Name</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Display View</TableHead>
+                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

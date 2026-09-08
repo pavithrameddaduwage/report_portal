@@ -452,23 +452,23 @@ const ReportConfiguration = () => {
                       strategy={verticalListSortingStrategy}
                     >
                       <Table className="text-xs min-w-[420px]">
-                        <TableHeader className="bg-[#dbe9f6]">
-                          <TableRow className="border-[#c8dced]">
-                            <TableHead className="w-[40px]"></TableHead>
-                            <TableHead className="w-[50px] text-[11px] font-bold text-[#0a1c30] uppercase text-center whitespace-nowrap">
-                              ORDER
+                        <TableHeader className="bg-[#edf4fa]">
+                          <TableRow className="border-[#dce6f1]">
+                            <TableHead className="w-[40px] h-12 py-3.5 px-3.5"></TableHead>
+                            <TableHead className="w-[60px] text-[13px] font-bold text-[#0a1c30] text-center whitespace-nowrap h-12 py-3.5 px-3.5">
+                              Order
                             </TableHead>
-                            <TableHead className="w-[50px] text-[11px] font-bold text-[#0a1c30] uppercase text-center whitespace-nowrap">
-                              HIDE
+                            <TableHead className="w-[60px] text-[13px] font-bold text-[#0a1c30] text-center whitespace-nowrap h-12 py-3.5 px-3.5">
+                              Hide
                             </TableHead>
-                            <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                              COLUMN NAME
+                            <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                              Column Name
                             </TableHead>
-                            <TableHead className="text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                              DISPLAY NAME
+                            <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                              Display Name
                             </TableHead>
-                            <TableHead className="w-[140px] text-[11px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                              FILTER TYPE
+                            <TableHead className="w-[140px] text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                              Filter Type
                             </TableHead>
                           </TableRow>
                         </TableHeader>
@@ -547,19 +547,19 @@ const ReportConfiguration = () => {
         <h2 className="text-[13px] font-bold text-[#0a1c30] mb-3">Existing reports</h2>
         <div className="overflow-x-auto w-full">
           <Table className="text-xs min-w-[380px]">
-            <TableHeader className="bg-[#dbe9f6]">
-              <TableRow className="border-[#c8dced]">
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  REPORT NAME
+            <TableHeader className="bg-[#edf4fa]">
+              <TableRow className="border-[#dce6f1]">
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  Report Name
                 </TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  VIEW
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  View
                 </TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  WORKSPACE
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  Workspace
                 </TableHead>
-                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  ACTION
+                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  Action
                 </TableHead>
               </TableRow>
             </TableHeader>

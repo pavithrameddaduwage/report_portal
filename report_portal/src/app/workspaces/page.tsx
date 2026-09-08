@@ -28,9 +28,9 @@ export default function WorkspacesPage() {
   useEffect(() => {
     const refresh = () => {
       const token = localStorage.getItem("access_token");
-      if (token) getAllWorkspaces(jwtDecode(token));
+      if (token) getAllWorkspaces(jwtDecode(token), true);
     };
-    const interval = window.setInterval(refresh, 10000);
+    const interval = window.setInterval(refresh, 60000);
     window.addEventListener("focus", refresh);
     return () => {
       window.clearInterval(interval);
@@ -38,9 +38,9 @@ export default function WorkspacesPage() {
     };
   }, []);
 
-  const getAllWorkspaces = async (decodedUser: any) => {
+  const getAllWorkspaces = async (decodedUser: any, isSilent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
       const email = decodedUser?.email || "";
       const rawRole = String(decodedUser?.role || "").toLowerCase();
       const isAdminToken =
@@ -82,16 +82,21 @@ export default function WorkspacesPage() {
       }
 
       const userRoles: string[] = (userDb?.role ? userDb.role.split(',') : [rawRole]).map((r: string) => r.trim().toLowerCase());
+      const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
       const isAdmin =
         isAdminToken ||
         userDb?.is_admin === true ||
         userRoles.some((r: string) => r === "admin" || r === "administrator");
 
-      const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
-
       const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => Number(ws.id)) : [];
       const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => Number(rpt.id)) : [];
       const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((id: number) => !isNaN(id) && id > 0) : [];
+
+      const hasWsRole = userRoles.some((r: string) => r.includes('user') || r.includes('wsmember') || r === 'workspace user') || workspaceids.length > 0 || reportids.length > 0;
+      if (isAdmin && !isSuperUser && !isSilent) {
+        router.push("/admin/user_management");
+        return;
+      }
 
       const finalworkspaces = rawWorkspaces
         .map((ws: any) => {
@@ -99,11 +104,11 @@ export default function WorkspacesPage() {
           const wsNameLower = String(ws.name || "").toLowerCase();
           const isWsMemberByRole = userRoles.some((r: string) => r.includes(wsNameLower) || r === `${wsNameLower} wsmember`);
           
-          const isWsAuth = isAdmin || isSuperUser || isWsMemberByRole || workspaceids.includes(wsIdNum);
+          const isWsAuth = isSuperUser || isWsMemberByRole || workspaceids.includes(wsIdNum);
           const authorizedReports = (ws.reports || [])
             .map((rpt: any) => {
               const rptIdNum = Number(rpt.id);
-              const isRptAuth = isWsAuth || reportids.includes(rptIdNum) || displayviewReportids.includes(rptIdNum);
+              const isRptAuth = isSuperUser || isWsAuth || reportids.includes(rptIdNum) || displayviewReportids.includes(rptIdNum);
               return {
                 ...rpt,
                 authorized: isRptAuth,
@@ -120,12 +125,34 @@ export default function WorkspacesPage() {
         .filter((ws: any) => ws.authorized);
 
       setWorkspaces(finalworkspaces);
-      setDisplayWorkspaces(finalworkspaces);
+      if (searchQuery.trim()) {
+        filterAndSetWorkspaces(finalworkspaces, searchQuery);
+      } else {
+        setDisplayWorkspaces(finalworkspaces);
+      }
     } catch (e) {
       console.error("Error loading workspaces:", e);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
+  };
+
+  const filterAndSetWorkspaces = (allWs: any[], query: string) => {
+    let filtered: any[] = [];
+    allWs.forEach((ws: any) => {
+      let filterWS: any = { ...ws };
+      let matchingReports: any = [];
+      (ws.reports || []).forEach((rpt: any) => {
+        if (rpt.report_name?.toString().toLowerCase().includes(query.toLowerCase())) {
+          matchingReports.push(rpt);
+        }
+      });
+      if (matchingReports.length > 0 || ws.name?.toLowerCase().includes(query.toLowerCase())) {
+        filterWS.reports = matchingReports.length > 0 ? matchingReports : ws.reports;
+        filtered.push(filterWS);
+      }
+    });
+    setDisplayWorkspaces(filtered);
   };
 
   const handleReportSearch = (e: any) => {
@@ -135,22 +162,7 @@ export default function WorkspacesPage() {
       setDisplayWorkspaces(workspaces);
       return;
     }
-
-    let filtered: any[] = [];
-    workspaces.forEach((ws: any) => {
-      let filterWS: any = { ...ws };
-      let matchingReports: any = [];
-      (ws.reports || []).forEach((rpt: any) => {
-        if (rpt.report_name?.toString().toLowerCase().includes(val.toLowerCase())) {
-          matchingReports.push(rpt);
-        }
-      });
-      if (matchingReports.length > 0 || ws.name?.toLowerCase().includes(val.toLowerCase())) {
-        filterWS.reports = matchingReports.length > 0 ? matchingReports : ws.reports;
-        filtered.push(filterWS);
-      }
-    });
-    setDisplayWorkspaces(filtered);
+    filterAndSetWorkspaces(workspaces, val);
   };
 
   return (
@@ -158,15 +170,12 @@ export default function WorkspacesPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
         <div>
-          <span className="text-[11px] font-bold text-[#2f8fe0] uppercase tracking-wider block mb-0.5">
-            REPORT PORTAL
+          <span className="text-[11px] font-bold text-[#2f8fe0] tracking-wider block mb-0.5">
+            Report Portal
           </span>
           <h1 className="text-[22px] font-bold text-[#0a1c30] leading-tight">
             Horizon Report Portal
           </h1>
-          <p className="text-xs text-[#335375] font-normal mt-0.5">
-            Select a workspace to browse and view reports
-          </p>
         </div>
         
         {/* Search Input and Button */}
@@ -195,62 +204,49 @@ export default function WorkspacesPage() {
           No workspaces or authorized reports found.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
           {displayworkspaces.map((workspace: any) => {
             const authReports = (workspace.reports || []).filter((r: any) => r.authorized !== false);
 
             return (
               <div 
                 key={workspace.id} 
-                className="bg-white rounded-xl border border-[#dce6f1] shadow-2xs hover:shadow-md hover:border-[#2f8fe0] transition-all p-4 flex flex-col justify-between"
+                className="bg-white rounded-xl border border-[#dce6f1] shadow-2xs hover:shadow-md hover:border-[#2f8fe0] transition-all p-4.5 flex flex-col justify-between"
               >
                 <div>
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg bg-[#f0f6fc] text-[#2f8fe0] flex items-center justify-center shrink-0">
-                      <Folder className="w-4 h-4" />
-                    </div>
-                    <span className="bg-[#f0f6fc] text-[#1e5f99] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  {/* Card Header with Heading & Badge on same level */}
+                  <div className="flex items-center justify-between gap-2 pb-2.5 mb-2 border-b border-[#f0f6fc]">
+                    <h3 className="font-bold text-base sm:text-lg text-[#0a1c30] truncate" title={workspace.name}>
+                      {workspace.name}
+                    </h3>
+                    <span className="bg-[#f0f6fc] text-[#1e5f99] text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0">
                       {authReports.length} {authReports.length === 1 ? "report" : "reports"}
                     </span>
                   </div>
 
-                  {/* Title & Description */}
-                  <h3 className="font-bold text-sm text-[#0a1c30] truncate mb-1" title={workspace.name}>
-                    {workspace.name}
-                  </h3>
-                  {workspace.description && (
-                    <p className="text-[11px] text-[#5c7f9f] line-clamp-2 mb-3">
-                      {workspace.description}
-                    </p>
-                  )}
-
-                  {/* Reports List inside Card */}
-                  <div className="flex flex-col gap-1.5 my-3 pt-2 border-t border-[#f0f6fc]">
+                  {/* Reports List inside Card (fixed height so all cards are identical size) */}
+                  <div className="flex flex-col gap-1 my-1 h-[225px] overflow-y-auto pr-1">
                     {authReports.length === 0 ? (
-                      <span className="text-[11px] text-[#8aa6bf] italic p-1">
-                        No reports assigned yet
-                      </span>
+                      <div className="h-full flex items-center justify-center">
+                        <span className="text-[11px] text-[#8aa6bf] italic">
+                          No reports assigned yet
+                        </span>
+                      </div>
                     ) : (
-                      authReports.slice(0, 3).map((rep: any) => (
+                      authReports.map((rep: any) => (
                         <Link
                           key={rep.id}
                           href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
                           className="flex items-center justify-between p-1.5 rounded-md hover:bg-[#f0f6fc] transition-colors group text-[11px]"
                         >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <FileText className="w-3 h-3 text-[#2f8fe0] shrink-0" />
+                          <div className="flex items-center gap-2 truncate">
+                            <FileText className="w-3.5 h-3.5 text-[#2f8fe0] shrink-0" />
                             <span className="text-[#0f2b48] font-medium truncate group-hover:text-[#2f8fe0]">
                               {rep.report_name}
                             </span>
                           </div>
                         </Link>
                       ))
-                    )}
-                    {authReports.length > 3 && (
-                      <span className="text-[10px] text-[#8aa6bf] font-medium pl-1">
-                        + {authReports.length - 3} more reports
-                      </span>
                     )}
                   </div>
                 </div>

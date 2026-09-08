@@ -68,10 +68,18 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => Number(rpt.id)) : [];
         const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((value: number) => !isNaN(value)) : [];
 
+        const hasWsRole = userRoles.some((r: string) => r.includes('user') || r.includes('wsmember') || r === 'workspace user') || workspaceids.length > 0 || reportids.length > 0;
+        const isAdminOnly = isAdmin && !isSuperUser && !hasWsRole;
+
+        if (isAdminOnly) {
+          router.push("/admin/user_management");
+          return;
+        }
+
         data.reports = (data.reports || [])
           .map((rpt: any) => {
             const reportIdNumber = Number(rpt.id);
-            rpt["authorized"] = isAdmin || isWsMemberByRole || workspaceids.includes(Number(data.id)) || reportids.includes(reportIdNumber) || displayviewReportids.includes(reportIdNumber);
+            rpt["authorized"] = isSuperUser || isWsMemberByRole || workspaceids.includes(Number(data.id)) || reportids.includes(reportIdNumber) || displayviewReportids.includes(reportIdNumber);
             return rpt;
           })
           .filter((rpt: any) => rpt.authorized);
@@ -156,8 +164,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
     <div className="w-full flex flex-col">
       {/* Top Header */}
       <div className="mb-3">
-        <span className="text-[11px] font-bold text-[#2f8fe0] uppercase tracking-wider block mb-0.5">
-          REPORT VIEW
+        <span className="text-[11px] font-bold text-[#2f8fe0] tracking-wider block mb-0.5">
+          Report View
         </span>
         <h1 className="text-[20px] font-bold text-[#0a1c30] leading-tight">
           {selectedReport?.report_name || "Data Report"}

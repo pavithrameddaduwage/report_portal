@@ -23,7 +23,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const perms = getUserPermissions();
-    if (!perms.isAdmin) {
+    if (!perms.canAccessAdminPanel) {
       router.push("/workspaces");
     } else {
       setIsAuthorized(true);
@@ -43,8 +43,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 h-full overflow-y-auto px-6 py-4 flex flex-col">
         {/* Header Title */}
         <div className="mb-4">
-          <span className="text-[11px] font-bold text-[#2f8fe0] uppercase tracking-wider block mb-0.5">
-            ADMIN PANEL
+          <span className="text-[11px] font-bold text-[#2f8fe0] tracking-wider block mb-0.5">
+            Admin Panel
           </span>
           <h1 className="text-[20px] font-bold text-[#0a1c30] leading-tight">
             {pageTitle}

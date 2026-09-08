@@ -301,7 +301,7 @@ const AdvancedTable = ({
                 {data.columns.map((column: any, index: number) => (
                   <TableHead
                     key={index}
-                    className="cursor-pointer text-[13px] font-bold text-[#0a1c30] py-3 px-3.5 select-none hover:bg-[#e4eff8] transition-colors"
+                    className="cursor-pointer text-sm font-bold text-[#0a1c30] py-3.5 px-4 h-12 select-none hover:bg-[#e4eff8] transition-colors"
                     onClick={() => handleSort(column.column)}
                   >
                     <div className="flex items-center gap-1.5">

@@ -160,11 +160,11 @@ const WorkspaceMaster = () => {
         <h2 className="text-[13px] font-bold text-[#0a1c30] mb-3">Existing workspaces</h2>
         <div className="overflow-x-auto w-full">
           <Table className="text-xs min-w-[340px]">
-            <TableHeader className="bg-[#dbe9f6]">
-              <TableRow className="border-[#c8dced]">
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">WORKSPACE</TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">DESCRIPTION</TableHead>
-                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">ACTION</TableHead>
+            <TableHeader className="bg-[#edf4fa]">
+              <TableRow className="border-[#dce6f1]">
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 whitespace-nowrap">Workspace</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 whitespace-nowrap">Description</TableHead>
+                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

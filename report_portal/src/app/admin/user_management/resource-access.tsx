@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Shield, Folder, FileText, Eye, Users } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Search, Shield, FileText, Users, ChevronRight, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { assignUsersToWorkspace } from "@/services/workspace-services";
 import { assignUsersToReport, assignUsersToDisplayView } from "@/services/report-service";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ export default function ResourceAccess() {
   const [isSavingAccess, setIsSavingAccess] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedReportIds, setExpandedReportIds] = useState<number[]>([]);
 
   const fetchData = async () => {
     try {
@@ -73,6 +74,12 @@ export default function ResourceAccess() {
     setDisplayViews(cachedDisplayViews || []);
     setAllUsers(cachedUsers || []);
   }, [cachedWorkspaces, cachedReports, cachedDisplayViews, cachedUsers]);
+
+  const toggleReportExpand = (reportId: number) => {
+    setExpandedReportIds(prev => 
+      prev.includes(reportId) ? prev.filter(id => id !== reportId) : [...prev, reportId]
+    );
+  };
 
   const handleOpenManagePermission = (type: "workspace" | "report" | "display_view", target: any) => {
     setTargetType(type);
@@ -143,14 +150,9 @@ export default function ResourceAccess() {
     <div className="space-y-4">
       {/* Workspace Selector Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#dce6f1] shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#eaf4fd] text-[#1890ff] flex items-center justify-center font-bold">
-            <Folder className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-[#5c7f9f] uppercase tracking-wider block">Workspace Filter</span>
-            <h3 className="text-sm font-bold text-[#0a1c30]">Select Target Workspace</h3>
-          </div>
+        <div>
+          <span className="text-[10px] font-bold text-[#5c7f9f] tracking-wider block">Workspace Filter</span>
+          <h3 className="text-sm font-bold text-[#0a1c30]">Select Target Workspace</h3>
         </div>
 
         <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
@@ -203,12 +205,12 @@ export default function ResourceAccess() {
         {/* Clean, Simplified Table */}
         <div className="overflow-x-auto rounded-xl border border-[#dce6f1]">
           <Table className="text-xs">
-            <TableHeader className="bg-[#f0f6fc]">
+            <TableHeader className="bg-[#edf4fa]">
               <TableRow className="border-[#dce6f1]">
-                <TableHead className="text-[11px] font-bold text-[#0a1c30]">REPORT / ITEM</TableHead>
-                <TableHead className="text-[11px] font-bold text-[#0a1c30]">TYPE</TableHead>
-                <TableHead className="text-[11px] font-bold text-[#0a1c30] text-center">ASSIGNED USERS</TableHead>
-                <TableHead className="text-[11px] font-bold text-[#0a1c30] text-right pr-6">ACTIONS</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Report</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Type</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 text-center">Assigned Users</TableHead>
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,19 +222,33 @@ export default function ResourceAccess() {
                 </TableRow>
               ) : (
                 workspaceReports.map((rpt: any) => {
-                  // Only get custom views (skip redundant default view duplicate rows)
+                  // Custom display views for this report
                   const customViews = displayViews.filter((dv: any) => 
                     dv.report?.id === rpt.id &&
                     String(dv.displayview_name || "").toLowerCase() !== String(rpt.report_name || "").toLowerCase() &&
                     String(dv.displayview_name || "").toLowerCase() !== "default view"
                   );
                   const rptUsersCount = rpt.users ? rpt.users.length : 0;
+                  const isExpanded = expandedReportIds.includes(rpt.id);
 
                   return (
                     <React.Fragment key={rpt.id}>
                       {/* Report Row */}
                       <TableRow className="border-[#dce6f1] hover:bg-[#f8fbfe]">
-                        <TableCell className="font-bold text-[#0a1c30] flex items-center gap-2.5 py-3">
+                        <TableCell className="font-bold text-[#0a1c30] flex items-center gap-2 py-3">
+                          {customViews.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleReportExpand(rpt.id)}
+                              className="p-1 rounded hover:bg-[#eaf4fd] text-[#1890ff] transition-colors shrink-0"
+                              title={isExpanded ? "Collapse views" : "Expand views"}
+                            >
+                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </button>
+                          ) : (
+                            <div className="w-6 shrink-0" />
+                          )}
+
                           <div className="w-7 h-7 rounded-md bg-[#eaf4fd] text-[#1890ff] flex items-center justify-center shrink-0">
                             <FileText className="w-4 h-4" />
                           </div>
@@ -245,7 +261,7 @@ export default function ResourceAccess() {
                         </TableCell>
                         <TableCell className="text-[#5c7f9f]">
                           <span className="bg-[#f0f6fc] text-[#1890ff] px-2 py-0.5 rounded text-[10px] font-bold">
-                            REPORT
+                            Report
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
@@ -254,7 +270,7 @@ export default function ResourceAccess() {
                             <span>{rptUsersCount} Users</span>
                           </span>
                         </TableCell>
-                        <TableCell className="text-right pr-4">
+                        <TableCell className="text-center">
                           <Button
                             type="button"
                             onClick={() => handleOpenManagePermission("report", rpt)}
@@ -266,26 +282,26 @@ export default function ResourceAccess() {
                         </TableCell>
                       </TableRow>
 
-                      {/* Custom Views Rows (Only rendered if actual custom display views exist) */}
-                      {customViews.map((dv: any) => {
+                      {/* Custom Views Rows (Collapsed by default, shown when expanded) */}
+                      {isExpanded && customViews.map((dv: any) => {
                         const dvUsersCount = dv.users ? dv.users.length : 0;
                         return (
                           <TableRow key={dv.id} className="border-[#dce6f1] bg-[#fdfefe] hover:bg-[#f6fafc]">
-                            <TableCell className="pl-10 text-[#0f2b48] flex items-center gap-2 font-medium py-2.5">
-                              <Eye className="w-3.5 h-3.5 text-[#2f8fe0]" />
+                            <TableCell className="pl-12 text-[#0f2b48] flex items-center gap-2 font-medium py-2.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#2f8fe0] shrink-0 inline-block" />
                               <span>{dv.displayview_name}</span>
                             </TableCell>
                             <TableCell>
-                              <span className="bg-[#f5f5f5] text-[#595959] px-2 py-0.5 rounded text-[10px] font-bold">
-                                CUSTOM VIEW
+                              <span className="bg-[#f0f6fc] text-[#1e5f99] px-2 py-0.5 rounded text-[10px] font-bold">
+                                Custom View
                               </span>
                             </TableCell>
                             <TableCell className="text-center">
-                              <span className="bg-[#f5f5f5] text-[#595959] px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                              <span className="bg-[#f0f6fc] text-[#1e5f99] px-2 py-0.5 rounded-full text-[10px] font-semibold">
                                 {dvUsersCount} Users
                               </span>
                             </TableCell>
-                            <TableCell className="text-right pr-4">
+                            <TableCell className="text-center">
                               <Button
                                 type="button"
                                 onClick={() => handleOpenManagePermission("display_view", dv)}
@@ -309,7 +325,7 @@ export default function ResourceAccess() {
 
       {/* Permission Assignment Modal */}
       <Dialog open={isManageAccessOpen} onOpenChange={setIsManageAccessOpen}>
-        <DialogContent className="max-w-md bg-white border border-[#c8dced] rounded-xl shadow-xl p-0 overflow-hidden">
+        <DialogContent className="max-w-xl bg-white border border-[#c8dced] rounded-xl shadow-xl p-0 overflow-hidden">
           <DialogHeader className="p-4 border-b border-[#edf3f9] bg-[#f8fbfe]">
             <DialogTitle className="text-sm font-bold text-[#0a1c30] flex items-center gap-2">
               <Shield className="w-4 h-4 text-[#1890ff]" />
@@ -356,20 +372,20 @@ export default function ResourceAccess() {
                         : "bg-white border-[#edf3f9] hover:bg-[#f8fbfd]"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3 truncate pr-2">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => {}}
-                        className="rounded border-[#c8dced] text-[#1890ff] focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded border-[#c8dced] text-[#1890ff] focus:ring-0 w-4 h-4 cursor-pointer shrink-0"
                       />
-                      <div>
-                        <div className="text-xs font-bold text-[#0a1c30]">{user.name}</div>
-                        <div className="text-[11px] text-[#5c7f9f]">{user.email}</div>
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-xs font-bold text-[#0a1c30] truncate">{user.name}</span>
+                        <span className="text-[11px] font-normal text-[#5c7f9f] truncate">({user.email})</span>
                       </div>
                     </div>
 
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-[#1890ff] border border-[#c8dced]">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-[#1890ff] border border-[#c8dced] shrink-0">
                       {user.role || (user.is_admin ? "Admin" : "User")}
                     </span>
                   </label>

@@ -722,16 +722,16 @@ export default function ReportSchedulerView() {
             ) : (
               <div className="rounded-xl border border-[#e5edf5] overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-[#f8fafc]">
-                    <TableRow>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Schedule Name</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Workspace / Report</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Display View</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Frequency</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Recipients</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Format</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Status</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138] text-right">Actions</TableHead>
+                  <TableHeader className="bg-[#edf4fa]">
+                    <TableRow className="border-[#dce6f1]">
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Schedule Name</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Workspace / Report</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Display View</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Frequency</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Recipients</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Format</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Status</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -774,14 +774,14 @@ export default function ReportSchedulerView() {
                         </TableCell>
 
                         <TableCell>
-                          <span className="text-[11px] font-bold text-[#0b2138] bg-[#e6f4ea] text-[#137333] px-2 py-0.5 rounded uppercase">
+                          <span className="text-[11px] font-bold text-[#137333] bg-[#e6f4ea] px-2 py-0.5 rounded">
                             {schedule.export_format || "CSV"}
                           </span>
                         </TableCell>
 
                         <TableCell>
                           {schedule.frequency_type === "ONE_TIME" || schedule.frequency_type === "MANUAL" ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#f0f6fc] text-[#1e5f99]">
                               One-Time
                             </span>
                           ) : (
@@ -791,10 +791,10 @@ export default function ReportSchedulerView() {
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                                 schedule.is_active
                                   ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                  : "bg-[#eaf2fb] text-[#5c7f9f] hover:bg-[#dbe9f6]"
                               }`}
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full ${schedule.is_active ? "bg-emerald-600" : "bg-gray-400"}`} />
+                              <span className={`w-1.5 h-1.5 rounded-full ${schedule.is_active ? "bg-emerald-600" : "bg-[#8aa6bf]"}`} />
                               <span>{schedule.is_active ? "Active" : "Paused"}</span>
                             </button>
                           )}
@@ -906,16 +906,16 @@ export default function ReportSchedulerView() {
             ) : (
               <div className="rounded-xl border border-[#e5edf5] overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-[#f8fafc]">
-                    <TableRow>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Execution Time</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Schedule / Report</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Display View</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Recipients Sent</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Trigger</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Records</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138]">Duration</TableHead>
-                      <TableHead className="text-xs font-bold text-[#0b2138] text-right">Status</TableHead>
+                  <TableHeader className="bg-[#edf4fa]">
+                    <TableRow className="border-[#dce6f1]">
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Execution Time</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Schedule / Report</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Display View</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Recipients Sent</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Trigger</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Records</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5">Duration</TableHead>
+                      <TableHead className="text-[13px] font-bold text-[#0a1c30] h-12 py-3.5 px-3.5 text-right">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1159,7 +1159,7 @@ export default function ReportSchedulerView() {
                 <div className="p-4 bg-[#f8fafc] border border-[#e5edf5] rounded-2xl space-y-3">
                   <div className="flex items-center gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-[#0b2138] uppercase tracking-wide">
+                      <label className="text-[11px] font-bold text-[#0b2138] tracking-wide">
                         Execution Time
                       </label>
                       <Input
@@ -1172,7 +1172,7 @@ export default function ReportSchedulerView() {
 
                     {formData.frequency_type === "MONTHLY" && (
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-[#0b2138] uppercase tracking-wide">
+                        <label className="text-[11px] font-bold text-[#0b2138] tracking-wide">
                           Day of Month
                         </label>
                         <Input
@@ -1189,7 +1189,7 @@ export default function ReportSchedulerView() {
 
                   {formData.frequency_type === "WEEKLY" && (
                     <div className="space-y-1.5 pt-1">
-                      <label className="text-[11px] font-bold text-[#0b2138] uppercase tracking-wide">
+                      <label className="text-[11px] font-bold text-[#0b2138] tracking-wide">
                         Select Execution Days
                       </label>
                       <div className="flex flex-wrap gap-1.5">

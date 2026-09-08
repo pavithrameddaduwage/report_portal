@@ -35,58 +35,74 @@ import {
   Download,
   Filter,
   Check,
-  CheckSquare,
-  Square,
+  Grid,
 } from "lucide-react";
 
 const AVAILABLE_PERMISSIONS = [
+  // Admin Panel Privileges
   {
     id: "report_config",
     label: "Report Configuration",
     description: "Create, edit, and configure data reports and data sources",
     icon: FileText,
+    category: "admin",
   },
   {
     id: "display_view",
     label: "Display View Configuration",
     description: "Design and customize column display views",
     icon: Monitor,
+    category: "admin",
   },
   {
     id: "workspace_management",
     label: "Workspace Management",
     description: "Create workspaces and manage report assignments",
     icon: Home,
+    category: "admin",
   },
   {
     id: "user_management",
     label: "User Management",
     description: "Add, edit users, and configure workspace permissions",
     icon: Users,
+    category: "admin",
   },
   {
     id: "report_scheduler",
     label: "Report Scheduler & Automation",
     description: "Create, configure, execute, and monitor automated report email dispatches",
     icon: Clock,
+    category: "admin",
   },
   {
     id: "roles_permissions",
     label: "Roles & Permissions",
     description: "Create custom roles and manage assigned privileges",
     icon: Key,
+    category: "admin",
+  },
+  // Workspace & Data Privileges
+  {
+    id: "workspace_access",
+    label: "Full Workspace Access",
+    description: "Access to view all workspaces and report data in the portal",
+    icon: Grid,
+    category: "workspace",
   },
   {
     id: "csv_export",
     label: "CSV Data Export",
     description: "Export and download report data in CSV format",
     icon: Download,
+    category: "workspace",
   },
   {
     id: "filter_sort",
     label: "Advanced Filtering & Sorting",
     description: "Use interactive column filters, date/number ranges, and sorting",
     icon: Filter,
+    category: "workspace",
   },
 ];
 
@@ -204,9 +220,6 @@ export default function RolesManagementPage() {
             <h2 className="text-[13px] font-bold text-[#0a1c30]">
               {selectedRole ? `Edit Role: ${selectedRole.role}` : "Create New Role"}
             </h2>
-            <p className="text-[11px] text-[#5c7f9f]">
-              Configure role name and tick the privileges assigned to this role
-            </p>
           </div>
         </div>
 
@@ -223,7 +236,7 @@ export default function RolesManagementPage() {
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="e.g. Data Analyst, Viewer, Finance Auditor"
+                      placeholder="e.g. Workspace User, Super User, Finance Auditor"
                       className="h-8 text-xs border-[#dce6f1] text-[#0f2b48] placeholder:text-[#8aa6bf] rounded-md shadow-2xs focus-visible:ring-1 focus-visible:ring-[#2f8fe0]"
                     />
                   </FormControl>
@@ -233,7 +246,7 @@ export default function RolesManagementPage() {
             />
 
             {/* Interactive Privileges Checkboxes */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-bold text-[#0d2745]">
                   Assign Privileges ({selectedPermissions.length} selected)
@@ -257,42 +270,92 @@ export default function RolesManagementPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                {AVAILABLE_PERMISSIONS.map((perm) => {
-                  const isChecked = selectedPermissions.includes(perm.id);
-                  const Icon = perm.icon;
+              {/* Section 1: Admin Panel Privileges */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-[#2f8fe0] tracking-wide block">
+                  Admin Panel Privileges (Admin Side)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {AVAILABLE_PERMISSIONS.filter(p => p.category === 'admin').map((perm) => {
+                    const isChecked = selectedPermissions.includes(perm.id);
+                    const Icon = perm.icon;
 
-                  return (
-                    <div
-                      key={perm.id}
-                      onClick={() => togglePermission(perm.id)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-start gap-3 select-none ${
-                        isChecked
-                          ? "bg-[#eaf4fd]/60 border-[#a8d3f7] shadow-2xs"
-                          : "bg-[#fbfdff] border-[#e2edf6] hover:bg-[#f6fafc]"
-                      }`}
-                    >
+                    return (
                       <div
-                        className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
+                        key={perm.id}
+                        onClick={() => togglePermission(perm.id)}
+                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
                           isChecked
-                            ? "bg-[#2f8fe0] text-white"
-                            : "border border-[#b8d2e8] bg-white"
+                            ? "bg-[#eaf4fd]/60 border-[#a8d3f7] shadow-2xs"
+                            : "bg-[#fbfdff] border-[#e2edf6] hover:bg-[#f6fafc]"
                         }`}
                       >
-                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
+                        <div
+                          className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
+                            isChecked
+                              ? "bg-[#2f8fe0] text-white"
+                              : "border border-[#b8d2e8] bg-white"
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <Icon className={`w-3.5 h-3.5 ${isChecked ? "text-[#2f8fe0]" : "text-[#8aa6bf]"}`} />
-                          <span className={`text-xs font-semibold truncate ${isChecked ? "text-[#0f2b48]" : "text-[#335375]"}`}>
-                            {perm.label}
-                          </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Icon className={`w-3.5 h-3.5 ${isChecked ? "text-[#2f8fe0]" : "text-[#8aa6bf]"}`} />
+                            <span className={`text-xs font-semibold truncate ${isChecked ? "text-[#0f2b48]" : "text-[#335375]"}`}>
+                              {perm.label}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 2: Workspace & Data Privileges */}
+              <div className="space-y-2 pt-1">
+                <span className="text-[11px] font-bold text-[#1e5f99] tracking-wide block">
+                  Workspace & Data Privileges (Workspace Side)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {AVAILABLE_PERMISSIONS.filter(p => p.category === 'workspace').map((perm) => {
+                    const isChecked = selectedPermissions.includes(perm.id);
+                    const Icon = perm.icon;
+
+                    return (
+                      <div
+                        key={perm.id}
+                        onClick={() => togglePermission(perm.id)}
+                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 select-none ${
+                          isChecked
+                            ? "bg-[#eaf4fd]/60 border-[#a8d3f7] shadow-2xs"
+                            : "bg-[#fbfdff] border-[#e2edf6] hover:bg-[#f6fafc]"
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
+                            isChecked
+                              ? "bg-[#2f8fe0] text-white"
+                              : "border border-[#b8d2e8] bg-white"
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Icon className={`w-3.5 h-3.5 ${isChecked ? "text-[#2f8fe0]" : "text-[#8aa6bf]"}`} />
+                            <span className={`text-xs font-semibold truncate ${isChecked ? "text-[#0f2b48]" : "text-[#335375]"}`}>
+                              {perm.label}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -330,14 +393,14 @@ export default function RolesManagementPage() {
           <Table className="text-xs min-w-[340px]">
             <TableHeader className="bg-[#edf4fa]">
               <TableRow className="border-[#dce6f1]">
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  ROLE
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  Role
                 </TableHead>
-                <TableHead className="text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  PRIVILEGES
+                <TableHead className="text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  Privileges
                 </TableHead>
-                <TableHead className="text-center text-[10px] font-bold text-[#0a1c30] uppercase whitespace-nowrap">
-                  ACTION
+                <TableHead className="text-center text-[13px] font-bold text-[#0a1c30] whitespace-nowrap h-12 py-3.5 px-3.5">
+                  Action
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -377,7 +440,7 @@ export default function RolesManagementPage() {
                               );
                             })
                           ) : (
-                            <span className="text-gray-400 italic text-[10px]">No privileges</span>
+                            <span className="text-[#8aa6bf] italic text-[10px]">No privileges</span>
                           )}
                         </div>
                       </TableCell>

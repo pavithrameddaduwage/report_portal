@@ -112,11 +112,11 @@ export default function DataTable() {
       </div>
 
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-[#edf4fa]">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="border-[#dce6f1]">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} onClick={header.column.getToggleSortingHandler()}>
+                <TableHead key={header.id} onClick={header.column.getToggleSortingHandler()} className="text-sm font-bold text-[#0a1c30] h-12 py-3 px-4 cursor-pointer select-none">
                   {flexRender(header.column.columnDef.header, header.getContext())}
                   {header.column.getIsSorted() === "asc" ? " 🔼" : header.column.getIsSorted() === "desc" ? " 🔽" : ""}
                 </TableHead>

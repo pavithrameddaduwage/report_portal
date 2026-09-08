@@ -9,10 +9,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login } from '@/services/authentication-service';
 import { toast } from 'sonner';
-import { Lock, User, Loader2, ArrowRight, LayoutGrid } from 'lucide-react';
+import { Lock, User, Loader2, ArrowRight, ShieldCheck } from 'lucide-react';
+
+import { jwtDecode } from 'jwt-decode';
 
 const loginSchema = z.object({
-  username: z.string().min(2, { message: 'Username is required' }),
+  username: z.string().min(2, { message: 'AD Username or email is required' }),
   password: z.string().min(1, { message: 'Password is required' }),
 });
 
@@ -38,23 +40,67 @@ export default function LoginPage() {
       const response = await login({ email: data.username.trim(), password: data.password });
 
       if (response.status === 200 && response.data?.access_token) {
-        localStorage.setItem("access_token", response.data.access_token);
+        const token = response.data.access_token;
+        localStorage.setItem("access_token", token);
         toast.success("Welcome back!");
-        router.push("/workspaces");
+
+        try {
+          const decoded: any = jwtDecode(token);
+          const rawRole = String(decoded?.role || "").toLowerCase();
+          const isAdmin =
+            decoded?.is_admin === true ||
+            decoded?.isAdmin === true ||
+            rawRole === "admin" ||
+            rawRole === "administrator" ||
+            (Array.isArray(decoded?.roles) && decoded.roles.some((r: any) => String(r).toLowerCase() === "admin"));
+          const isSuperUser = rawRole === "super user" || rawRole === "superuser" || (Array.isArray(decoded?.roles) && decoded.roles.some((r: any) => String(r).toLowerCase().includes("super")));
+
+          if (isAdmin && !isSuperUser) {
+            router.push("/admin/user_management");
+          } else {
+            router.push("/workspaces");
+          }
+        } catch (e) {
+          router.push("/workspaces");
+        }
       } else {
         toast.error("Login failed. Please check your credentials.");
+        setIsLoading(false);
       }
     } catch (error: any) {
       toast.error("Authentication Failed", {
-        description: error.response?.data?.message || "Invalid username or password. Please try again.",
+        description: error.response?.data?.message || "Invalid AD username or password. Please try again.",
       });
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-white font-sans">
+    <div className="flex min-h-screen bg-white font-sans relative">
+      {/* Full-Screen Loading Screen Overlay when logging in */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 bg-[#081323]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-white transition-all duration-300">
+          <div className="relative flex items-center justify-center mb-8">
+            {/* Outer Glowing Ring */}
+            <div className="w-24 h-24 rounded-full border-4 border-[#2f8fe0]/20 border-t-[#2f8fe0] animate-spin" />
+            <img
+              src="/logo.png"
+              alt="Horizon Logo"
+              className="w-12 h-12 object-contain absolute brightness-0 invert animate-pulse"
+            />
+          </div>
+          
+          <h2 className="text-xl font-bold text-white tracking-wide mb-2 flex items-center gap-2">
+            <span>Signing into Report Portal</span>
+          </h2>
+
+          {/* Progress pulse bar */}
+          <div className="w-48 h-1 bg-[#163050] rounded-full mt-4 overflow-hidden relative">
+            <div className="absolute inset-0 bg-[#2f8fe0] animate-pulse rounded-full" />
+          </div>
+        </div>
+      )}
+
       {/* Left Column - Branding */}
       <div className="hidden lg:flex w-[45%] bg-[#081323] relative flex-col justify-between overflow-hidden">
         {/* Top Logo */}
@@ -72,6 +118,9 @@ export default function LoginPage() {
             Horizon Group USA <br />
             <span className="text-[#4eb4eb]">Report Portal</span>
           </h1>
+          <p className="text-[13px] text-[#8aa6bf] mt-4 max-w-sm">
+            Unified BI and reporting platform powered by Active Directory authentication.
+          </p>
         </div>
 
         {/* Bottom Wavy Graphics */}
@@ -106,7 +155,7 @@ export default function LoginPage() {
             <h3 className="text-[12px] text-[#5c7f9f] font-semibold mb-1">Report Portal</h3>
             <h1 className="text-3xl font-bold text-[#0d2745] mb-2 tracking-tight">Welcome back</h1>
             <p className="text-[13px] text-[#5c7f9f]">
-              Sign in with your corporate domain credentials to continue.
+              Sign in using your Active Directory username or corporate email.
             </p>
           </div>
 
@@ -114,13 +163,13 @@ export default function LoginPage() {
             {/* Username Input */}
             <div className="space-y-1.5">
               <label className="text-[12px] font-bold text-[#0d2745] block">
-                Username or email
+                AD Username or Email
               </label>
               <div className="relative">
                 <Input
                   {...register('username')}
                   type="text"
-                  placeholder="***@hgusa.com"
+                  placeholder=""
                   disabled={isLoading}
                   className="h-11 text-[13px] pr-10 border-b border-t-0 border-x-0 border-[#dce6f1] rounded-none px-0 text-[#0f2b48] placeholder:text-[#a0b3c6] focus-visible:ring-0 focus-visible:border-[#0d2745] bg-transparent transition-colors shadow-none"
                 />
@@ -140,7 +189,7 @@ export default function LoginPage() {
                 <Input
                   {...register('password')}
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder=""
                   disabled={isLoading}
                   className="h-11 text-[13px] pr-10 border-b border-t-0 border-x-0 border-[#dce6f1] rounded-none px-0 text-[#0f2b48] placeholder:text-[#a0b3c6] focus-visible:ring-0 focus-visible:border-[#0d2745] bg-transparent transition-colors shadow-none"
                 />
@@ -154,7 +203,7 @@ export default function LoginPage() {
             {/* Remember Me */}
             <div className="flex items-center pt-1">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" className="rounded border-gray-300 text-[#0d2745] focus:ring-[#0d2745]" />
+                <input type="checkbox" className="rounded border-[#c8dced] text-[#0d2745] focus:ring-[#0d2745]" />
                 <span className="text-[12px] text-[#5c7f9f] group-hover:text-[#0d2745] transition-colors">Remember me</span>
               </label>
             </div>

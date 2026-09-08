@@ -52,7 +52,7 @@ export function AppSidebar() {
       const perms = getUserPermissions();
       let wsData = [];
       
-      if (perms.isAdmin) {
+      if (perms.isSuperUser) {
         const wsRes = await findAllWorkspaces();
         if (wsRes.status === 200) {
           const workspaceData = wsRes.data;
@@ -66,6 +66,8 @@ export function AppSidebar() {
             reports: (ws.reports || []).map((rpt: any) => ({ ...rpt, authorized: true })),
           }));
         }
+      } else if (perms.isAdminOnly) {
+        wsData = [];
       } else if (email) {
         const [userRes, allWsRes] = await Promise.all([
           findUserByEmail({ email, userid }),
@@ -126,12 +128,13 @@ export function AppSidebar() {
     setExpandedWorkspaces(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const signingOut = async () => {
+  const signingOut = () => {
     try {
       localStorage.removeItem("access_token");
-      router.push("/login");
+      sessionStorage.clear();
+      window.location.href = "/login";
     } catch (error) {
-      router.push("/login");
+      window.location.href = "/login";
     }
   };
 
@@ -145,7 +148,7 @@ export function AppSidebar() {
           className="w-8 h-8 object-contain shrink-0"
         />
         <div className="flex flex-col">
-          <span className="text-white font-bold text-[11px] tracking-wider uppercase leading-tight">HORIZON GROUP USA</span>
+          <span className="text-white font-bold text-[11px] tracking-wider leading-tight">Horizon Group USA</span>
           <span className="text-[#5aa8ea] text-[11px] font-medium leading-tight">Report Portal</span>
         </div>
       </div>
@@ -153,19 +156,21 @@ export function AppSidebar() {
       {/* Main Nav Items */}
       <div className="px-3 flex-1 flex flex-col overflow-y-auto no-scrollbar">
         <div className="flex flex-col gap-1 mb-6">
-          <Link
-            href="/workspaces"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
-              !isAdminRoute
-                ? "bg-[#173759] text-white font-semibold"
-                : "text-[#8fa3b7] hover:text-white hover:bg-white/[0.04]"
-            }`}
-          >
-            <Grid className="w-4 h-4" />
-            <span>Workspaces</span>
-          </Link>
+          {permissions.canAccessWorkspaces && (
+            <Link
+              href="/workspaces"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                !isAdminRoute
+                  ? "bg-[#173759] text-white font-semibold"
+                  : "text-[#8fa3b7] hover:text-white hover:bg-white/[0.04]"
+              }`}
+            >
+              <Grid className="w-4 h-4" />
+              <span>Workspaces</span>
+            </Link>
+          )}
 
-          {permissions.isAdmin && (
+          {permissions.canAccessAdminPanel && (
             <Link
               href={
                 permissions.canConfigureReports
@@ -191,8 +196,8 @@ export function AppSidebar() {
         {/* Admin Sections OR Workspace Tree */}
         {isAdminRoute ? (
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-[#64748b] tracking-wider uppercase px-3 mb-2">
-              ADMIN SECTIONS
+            <span className="text-[10px] font-bold text-[#64748b] tracking-wider px-3 mb-2">
+              Admin Sections
             </span>
             <div className="flex flex-col gap-1">
               {(() => {
@@ -229,8 +234,8 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-[#64748b] tracking-wider uppercase px-3 mb-2">
-              YOUR WORKSPACES
+            <span className="text-[10px] font-bold text-[#64748b] tracking-wider px-3 mb-2">
+              Your Workspaces
             </span>
             <div className="flex flex-col gap-1">
               {workspaces.length === 0 ? (
@@ -308,7 +313,7 @@ export function AppSidebar() {
               })()}
             </span>
             <span className="text-[#5aa8ea] text-[10px] font-medium leading-tight">
-              {permissions.user?.roles?.[0] || (permissions.isAdmin ? "Administrator" : "User")}
+              {permissions.user?.roles?.[0] || (permissions.isSuperUser ? "Super User" : permissions.isAdmin ? "Administrator" : "Workspace User")}
             </span>
           </div>
         </div>

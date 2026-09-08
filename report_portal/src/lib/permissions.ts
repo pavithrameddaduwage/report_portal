@@ -3,7 +3,10 @@ import { jwtDecode } from "jwt-decode";
 export interface UserPermissions {
   user: any;
   isAdmin: boolean;
+  isSuperUser?: boolean;
+  isAdminOnly?: boolean;
   canAccessAdminPanel: boolean;
+  canAccessWorkspaces?: boolean;
   canManageUsers: boolean;
   canManageWorkspaces: boolean;
   canConfigureReports: boolean;
@@ -59,13 +62,31 @@ export function getUserPermissions(): UserPermissions {
     const userid = String(decoded.userid || "").toLowerCase();
 
     const userRoleList = (decoded.role || "").split(',').map((r: string) => r.trim().toLowerCase());
+
+    // Super User: Full access to ALL Workspaces & Reports, NO access to Admin Panel
+    const isSuperUser =
+      userRoleList.includes("super user") ||
+      userRoleList.includes("superuser") ||
+      roles.some((r) => String(r).trim().toLowerCase() === "super user" || String(r).trim().toLowerCase() === "superuser");
+
+    // Admin: Full access to Admin Panel ONLY, NO access to Workspaces
     const isAdmin =
-      decoded.is_admin === true ||
-      decoded.isAdmin === true ||
-      userRoleList.includes("admin") ||
-      roles.some((r) => String(r).trim().toLowerCase() === "admin") ||
-      email === "admin@hgusa.com" ||
-      userid === "admin";
+      !isSuperUser &&
+      (decoded.is_admin === true ||
+       decoded.isAdmin === true ||
+       userRoleList.includes("admin") ||
+       userRoleList.includes("administrator") ||
+       roles.some((r) => String(r).trim().toLowerCase() === "admin") ||
+       email === "admin@hgusa.com" ||
+       userid === "admin");
+
+    const hasWorkspaceRole =
+      isSuperUser ||
+      userRoleList.some((r: string) => r.includes("user") || r.includes("wsmember") || r === "workspace user") ||
+      (Array.isArray(decoded.workspaces) && decoded.workspaces.length > 0);
+
+    const canAccessAdminPanel = isAdmin; // Admin ONLY!
+    const canAccessWorkspaces = isSuperUser || hasWorkspaceRole; // Super User & Workspace User ONLY! Admin has NO workspace access!
 
     const userPerms: string[] = Array.isArray(decoded.permissions) ? decoded.permissions : [];
 
@@ -77,15 +98,16 @@ export function getUserPermissions(): UserPermissions {
     const canConfigureDisplayViews = isAdmin || hasPerm("display_view");
     const canScheduleReports = isAdmin || hasPerm("report_scheduler") || hasPerm("scheduler");
     const canManageRoles = isAdmin || hasPerm("roles_permissions");
-    const canExportCsv = isAdmin || hasPerm("csv_export");
-    const canFilterSort = isAdmin || hasPerm("filter_sort");
-
-    const canAccessAdminPanel = isAdmin;
+    const canExportCsv = isAdmin || isSuperUser || hasPerm("csv_export");
+    const canFilterSort = isAdmin || isSuperUser || hasPerm("filter_sort");
 
     return {
       user: decoded,
       isAdmin,
+      isSuperUser,
+      isAdminOnly: isAdmin,
       canAccessAdminPanel,
+      canAccessWorkspaces: canAccessWorkspaces && !isAdmin,
       canManageUsers,
       canManageWorkspaces,
       canConfigureReports,

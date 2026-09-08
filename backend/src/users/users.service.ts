@@ -55,26 +55,37 @@ export class UsersService implements OnModuleInit {
 
   async seedDefaultRolesAndPermissions() {
     try {
+      // Delete obsolete Viewer role if it exists in DB
+      try {
+        await this.roleRepository.createQueryBuilder().delete().where("LOWER(role) = :r", { r: "viewer" }).execute();
+      } catch (e) {}
+
       const existing = await this.roleRepository.find();
+      const adminPerms = [
+        'report_config',
+        'display_view',
+        'workspace_management',
+        'user_management',
+        'report_scheduler',
+        'roles_permissions',
+      ];
+      const superUserPerms = ['workspace_access', 'csv_export', 'filter_sort'];
+      const workspaceUserPerms = ['csv_export', 'filter_sort'];
+
       if (!existing || existing.length === 0) {
         console.log('[Bootstrap] Initializing Role & Permission Master Data in PostgreSQL...');
         const defaultRoles = [
           {
             role: 'Admin',
-            permissions: JSON.stringify([
-              'report_config',
-              'display_view',
-              'workspace_management',
-              'user_management',
-              'report_scheduler',
-              'roles_permissions',
-              'csv_export',
-              'filter_sort',
-            ]),
+            permissions: JSON.stringify(adminPerms),
           },
           {
             role: 'Super User',
-            permissions: JSON.stringify(['csv_export', 'filter_sort']),
+            permissions: JSON.stringify(superUserPerms),
+          },
+          {
+            role: 'Workspace User',
+            permissions: JSON.stringify(workspaceUserPerms),
           },
           {
             role: 'Sales WSMember',
@@ -83,18 +94,6 @@ export class UsersService implements OnModuleInit {
           {
             role: 'Inventory WSMember',
             permissions: JSON.stringify(['filter_sort']),
-          },
-          {
-            role: 'User',
-            permissions: JSON.stringify(['csv_export', 'filter_sort']),
-          },
-          {
-            role: 'Viewer',
-            permissions: JSON.stringify(['filter_sort']),
-          },
-          {
-            role: 'Manager',
-            permissions: JSON.stringify(['workspace_management', 'report_scheduler', 'csv_export', 'filter_sort']),
           },
         ];
 
@@ -106,26 +105,30 @@ export class UsersService implements OnModuleInit {
         }
         console.log('[Bootstrap] Role & Permission Master Data created successfully.');
       } else {
-        // Ensure standard roles exist if seed was previously run
-        const standardRoles = ['Super User', 'Sales WSMember', 'Inventory WSMember'];
-        for (const sr of standardRoles) {
-          const found = existing.find(r => r.role === sr);
-          if (!found) {
-            const roleObj = new RoleMaster();
-            roleObj.role = sr;
-            roleObj.permissions = JSON.stringify(['filter_sort']);
-            await this.roleRepository.save(roleObj);
-          }
-        }
-        const adminRole = existing.find(r => r.role === 'Admin');
+        // Sync & update standard roles in DB
+        const adminRole = existing.find(r => r.role.toLowerCase() === 'admin');
         if (adminRole) {
-          let perms: string[] = [];
-          try { perms = JSON.parse(adminRole.permissions || '[]'); } catch (e) {}
-          if (!perms.includes('report_scheduler')) {
-            perms.push('report_scheduler');
-            adminRole.permissions = JSON.stringify(perms);
-            await this.roleRepository.save(adminRole);
-          }
+          adminRole.permissions = JSON.stringify(adminPerms);
+          await this.roleRepository.save(adminRole);
+        }
+
+        const superUserRole = existing.find(r => r.role.toLowerCase() === 'super user' || r.role.toLowerCase() === 'superuser');
+        if (superUserRole) {
+          superUserRole.permissions = JSON.stringify(superUserPerms);
+          await this.roleRepository.save(superUserRole);
+        } else {
+          const roleObj = new RoleMaster();
+          roleObj.role = 'Super User';
+          roleObj.permissions = JSON.stringify(superUserPerms);
+          await this.roleRepository.save(roleObj);
+        }
+
+        const wsUserRole = existing.find(r => r.role.toLowerCase() === 'workspace user' || r.role.toLowerCase() === 'user');
+        if (!wsUserRole) {
+          const roleObj = new RoleMaster();
+          roleObj.role = 'Workspace User';
+          roleObj.permissions = JSON.stringify(workspaceUserPerms);
+          await this.roleRepository.save(roleObj);
         }
       }
     } catch (err) {

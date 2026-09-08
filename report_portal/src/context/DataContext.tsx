@@ -68,7 +68,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch Users
   const fetchUsers = useCallback(async (force = false) => {
-    if (!force && users.length > 0) return users;
     setLoadingUsers(true);
     try {
       const res = await findAllusers();
@@ -83,12 +82,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoadingUsers(false);
     }
-    return users;
-  }, [users]);
+    return [];
+  }, []);
 
   // Fetch Workspaces
   const fetchWorkspaces = useCallback(async (force = false) => {
-    if (!force && workspaces.length > 0) return workspaces;
     setLoadingWorkspaces(true);
     try {
       const res = await findAllWorkspaces();
@@ -103,12 +101,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoadingWorkspaces(false);
     }
-    return workspaces;
-  }, [workspaces]);
+    return [];
+  }, []);
 
   // Fetch Roles
   const fetchRoles = useCallback(async (force = false) => {
-    if (!force && roles.length > 0) return roles;
     setLoadingRoles(true);
     try {
       const res = await findAllRoles();
@@ -123,12 +120,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoadingRoles(false);
     }
-    return roles;
-  }, [roles]);
+    return [];
+  }, []);
 
   // Fetch Display Views
   const fetchDisplayViews = useCallback(async (force = false) => {
-    if (!force && displayViews.length > 0) return displayViews;
     setLoadingDisplayViews(true);
     try {
       const res = await findAllDisplayViews();
@@ -143,11 +139,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoadingDisplayViews(false);
     }
-    return displayViews;
-  }, [displayViews]);
+    return [];
+  }, []);
 
   const fetchReports = useCallback(async (force = false) => {
-    if (!force && reports.length > 0) return reports;
     try {
       const res = await findAllReports();
       const reportList = res?.data || res || [];
@@ -159,8 +154,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error("Failed to fetch reports:", err);
     }
-    return reports;
-  }, [reports]);
+    return [];
+  }, []);
 
   // Fetch All Master Data concurrently
   const fetchAllData = useCallback(async (force = false) => {
