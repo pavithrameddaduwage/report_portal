@@ -175,6 +175,7 @@ const AdvancedTable = ({
       resData.columns = datacolumns;
       return resData;
     },
+    enabled: Boolean(view && schema),
     staleTime: 60 * 1000,
     placeholderData: (prevData) => prevData,
   });

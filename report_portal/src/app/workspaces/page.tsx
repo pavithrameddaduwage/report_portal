@@ -62,19 +62,21 @@ export default function WorkspacesPage() {
 
       const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
 
-      const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => ws.id) : [];
-      const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => rpt.id) : [];
-      const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => dv.report?.id || dv.reportId).filter(Boolean) : [];
+      const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => Number(ws.id)) : [];
+      const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => Number(rpt.id)) : [];
+      const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((id: number) => !isNaN(id) && id > 0) : [];
 
       const finalworkspaces = rawWorkspaces
         .map((ws: any) => {
+          const wsIdNum = Number(ws.id);
           const wsNameLower = String(ws.name || "").toLowerCase();
           const isWsMemberByRole = userRoles.some((r: string) => r.includes(wsNameLower) || r === `${wsNameLower} wsmember`);
           
-          const isWsAuth = isAdmin || isSuperUser || isWsMemberByRole || workspaceids.includes(ws.id);
+          const isWsAuth = isAdmin || isSuperUser || isWsMemberByRole || workspaceids.includes(wsIdNum);
           const authorizedReports = (ws.reports || [])
             .map((rpt: any) => {
-              const isRptAuth = isWsAuth || reportids.includes(rpt.id) || displayviewReportids.includes(rpt.id);
+              const rptIdNum = Number(rpt.id);
+              const isRptAuth = isWsAuth || reportids.includes(rptIdNum) || displayviewReportids.includes(rptIdNum);
               return {
                 ...rpt,
                 authorized: isRptAuth,

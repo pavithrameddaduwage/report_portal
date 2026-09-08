@@ -135,7 +135,7 @@ export class UsersService implements OnModuleInit {
 
   findAllUsers() {
     return this.userRepository.find({
-      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report', 'reports.workspace'],
+      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report'],
     });
   }
 
@@ -185,7 +185,8 @@ export class UsersService implements OnModuleInit {
     if (user.workspaceIds !== undefined) userEntity.workspaces = workspaces;
     if (user.reportIds !== undefined) userEntity.reports = reports;
     if (user.displayviewIds !== undefined) userEntity.displayviews = displayviews;
-    userEntity.is_admin = user.is_admin === true || (user.role && user.role.toLowerCase().includes('admin'));
+    const roleList = (user.role || '').split(',').map((r: string) => r.trim().toLowerCase());
+    userEntity.is_admin = user.is_admin === true || roleList.includes('admin');
     userEntity.role = user.role || (userEntity.is_admin ? 'Admin' : 'User');
 
     const output = await this.userRepository.save(userEntity);
@@ -225,7 +226,7 @@ export class UsersService implements OnModuleInit {
   async findUserByEmail(email: string) {
     return this.userRepository.findOne({
       where: { email: ILike(email) },
-      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report', 'reports.workspace'],
+      relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report'],
     });
   }
 
@@ -233,8 +234,23 @@ export class UsersService implements OnModuleInit {
     return this.userRepository.findOne({ where: { id: id } });
   }
 
-  deleteUser(id: number) {
-    return this.userRepository.delete({ id: id });
+  async deleteUser(id: number) {
+    const numId = Number(id);
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: numId },
+        relations: ['workspaces', 'reports', 'displayviews'],
+      });
+      if (user) {
+        user.workspaces = [];
+        user.reports = [];
+        user.displayviews = [];
+        await this.userRepository.save(user);
+      }
+    } catch (err) {
+      console.warn('Error clearing user relations before delete:', err?.message);
+    }
+    return this.userRepository.delete({ id: numId });
   }
 
   // --- Role & Permission Master Methods ---

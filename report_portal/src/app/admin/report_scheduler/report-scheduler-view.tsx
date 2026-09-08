@@ -69,10 +69,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useData } from "@/context/DataContext";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function ReportSchedulerView() {
+  const {
+    workspaces: cachedWorkspaces,
+    displayViews: cachedDisplayViews,
+    fetchWorkspaces: fetchWorkspacesCtx,
+    fetchDisplayViews: fetchDisplayViewsCtx,
+  } = useData();
+
   const [activeTab, setActiveTab] = useState<"schedules" | "logs">("schedules");
 
   // Data states
@@ -89,9 +97,9 @@ export default function ReportSchedulerView() {
   const [runningScheduleId, setRunningScheduleId] = useState<number | null>(null);
 
   // Dropdown dependency states
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [workspaces, setWorkspaces] = useState<any[]>(cachedWorkspaces || []);
   const [reports, setReports] = useState<any[]>([]);
-  const [displayViews, setDisplayViews] = useState<any[]>([]);
+  const [displayViews, setDisplayViews] = useState<any[]>(cachedDisplayViews || []);
   const [filteredDisplayViews, setFilteredDisplayViews] = useState<any[]>([]);
 
   // Dialog State
@@ -208,12 +216,12 @@ export default function ReportSchedulerView() {
 
   const fetchWorkspacesAndViews = async () => {
     try {
-      const [wsRes, dvRes] = await Promise.all([
-        findAllWorkspaces(),
-        findAllDisplayViews(),
+      const [wsList, dvList] = await Promise.all([
+        fetchWorkspacesCtx(),
+        fetchDisplayViewsCtx(),
       ]);
-      if (wsRes?.data) setWorkspaces(wsRes.data);
-      if (dvRes?.data) setDisplayViews(dvRes.data);
+      if (wsList) setWorkspaces(wsList);
+      if (dvList) setDisplayViews(dvList);
     } catch (e) {
       console.error(e);
     }

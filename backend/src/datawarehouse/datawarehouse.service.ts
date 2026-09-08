@@ -30,6 +30,10 @@ export class DatawarehouseService {
     return parseInt(`${year}${month}${day}`);
   }
 
+  private readonly dropdownCache = new Map<string, { data: string[]; timestamp: number }>();
+  private readonly columnCache = new Map<string, { columns: string[]; timestamp: number }>();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+
   async getItemsforDropdown(data: {
     schema: string;
     view: string;
@@ -38,13 +42,21 @@ export class DatawarehouseService {
     if (!data.view || !data.schema || !data.column) {
       return [];
     }
+    const cacheKey = `${data.schema}:${data.view}:${data.column}`;
+    const cached = this.dropdownCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+      return cached.data;
+    }
+
     try {
       const query = `SELECT DISTINCT "${data.column}" as item FROM "${data.schema}"."${data.view}" WHERE "${data.column}" IS NOT NULL LIMIT 200`;
       const output = await this.entityManager.query(query);
-      if (output && output.length > 0) {
-        return output.map((f: any) => String(f.item)).filter(Boolean);
-      }
-      return [];
+      const result = (output && output.length > 0)
+        ? output.map((f: any) => String(f.item)).filter(Boolean)
+        : [];
+      
+      this.dropdownCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
     } catch (error) {
       console.error('Error fetching dropdown items from datawarehouse:', error?.message);
       return [];
@@ -202,16 +214,22 @@ export class DatawarehouseService {
     if (!data.view || !data.schema) {
       return new HttpException('Schema and view parameters are required', 400);
     }
+    const cacheKey = `${data.schema}:${data.view}`;
+    const cached = this.columnCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < (30 * 60 * 1000)) {
+      return { columns: cached.columns };
+    }
+
     try {
       const columnQuery = `
         SELECT column_name FROM information_schema.columns 
         WHERE table_schema = $1 AND table_name = $2
         ORDER BY ordinal_position ASC
       `;
-      const columns = (
-        await this.entityManager.query(columnQuery, [data.schema, data.view])
-      ).map((row: any) => row.column_name);
+      const rawCols = await this.entityManager.query(columnQuery, [data.schema, data.view]);
+      const columns = (rawCols || []).map((row: any) => row.column_name);
 
+      this.columnCache.set(cacheKey, { columns, timestamp: Date.now() });
       return { columns: columns || [] };
     } catch (error) {
       console.error('Error fetching columns from information_schema:', error?.message);

@@ -136,13 +136,10 @@ export default function UserAccessView() {
             <UserCheck className="w-4 h-4 text-[#2f8fe0]" />
             User Access View
           </h2>
-          <p className="text-xs text-[#5c7f9f]">
-            Select a user to inspect all assigned Workspace, Report, and View access rights.
-          </p>
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <span className="text-xs font-semibold text-[#0a1c30] whitespace-nowrap">Select User:</span>
+          <span className="text-xs font-semibold text-[#0a1c30] whitespace-nowrap">Select User</span>
           <Select value={selectedUserId} onValueChange={handleSelectUser}>
             <SelectTrigger className="w-64 h-9 text-xs border-[#c8dced] bg-[#f8fbfe] font-medium text-[#0f2b48]">
               <SelectValue placeholder="Select User..." />
@@ -172,14 +169,14 @@ export default function UserAccessView() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-[#5c7f9f]">ROLES:</span>
+            <span className="text-[11px] font-semibold text-[#5c7f9f]">ROLES</span>
             <span className="bg-[#eaf4fd] text-[#1890ff] font-bold text-[10px] px-2.5 py-1 rounded-full border border-[#c8dced]">
               {selectedUser.role || (selectedUser.is_admin ? "Admin" : "User")}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-[#5c7f9f]">STATUS:</span>
+            <span className="text-[11px] font-semibold text-[#5c7f9f]">STATUS</span>
             <span className={`font-bold text-[10px] px-2.5 py-1 rounded-full ${selectedUser.is_active !== false ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
               {selectedUser.is_active !== false ? "ACTIVE" : "INACTIVE"}
             </span>

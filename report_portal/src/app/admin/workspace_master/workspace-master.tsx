@@ -29,6 +29,7 @@ import {
   findAllWorkspaces,
 } from "@/services/workspace-services";
 import { toast } from "sonner";
+import { useData } from "@/context/DataContext";
 
 type Workspace = {
   id?: number;
@@ -42,7 +43,7 @@ const workspaceSchema = z.object({
 });
 
 const WorkspaceMaster = () => {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const { workspaces, fetchWorkspaces: fetchWorkspacesCtx } = useData();
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
 
   const form = useForm<Workspace>({
@@ -51,18 +52,11 @@ const WorkspaceMaster = () => {
   });
 
   const fetchWorkspaces = async () => {
-    try {
-      const res = await findAllWorkspaces();
-      if (res.status === 200) {
-        setWorkspaces(res.data);
-      }
-    } catch (error) {
-      console.error(error);
-    }
+    await fetchWorkspacesCtx(true);
   };
 
   useEffect(() => {
-    fetchWorkspaces();
+    fetchWorkspacesCtx();
   }, []);
 
   const handleEditWorkspace = (workspace: Workspace) => {

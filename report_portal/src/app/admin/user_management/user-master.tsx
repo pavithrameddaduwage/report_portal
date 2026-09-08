@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Loader2, Search, UserCheck, ChevronLeft, ChevronRight, Users, X, Check, Shield, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useData } from "@/context/DataContext";
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -24,11 +25,18 @@ const userSchema = z.object({
 });
 
 const UserMaster = () => {
-  const [users, setUsers] = useState<any[]>([]);
+  const {
+    users,
+    workspaces: rawWorkspaces,
+    roles: rolesList,
+    displayViews: allDisplayViews,
+    loadingUsers,
+    fetchUsers: fetchUsersCtx,
+    fetchWorkspaces: fetchWorkspacesCtx,
+    fetchAllData: fetchAllDataCtx,
+  } = useData();
+
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [rawWorkspaces, setRawWorkspaces] = useState<any[]>([]);
-  const [allDisplayViews, setAllDisplayViews] = useState<any[]>([]);
-  const [rolesList, setRolesList] = useState<any[]>([]);
   
   // Wizard Modal State
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
@@ -60,38 +68,15 @@ const UserMaster = () => {
   });
 
   useEffect(() => {
-    fetchAllData();
+    fetchAllDataCtx();
   }, []);
 
-  const fetchAllData = async () => {
-    try {
-      const [uRes, wsRes, rRes, dvRes] = await Promise.all([
-        findAllusers().catch(() => ({ status: 500, data: [] })),
-        findAllWorkspaces().catch(() => ({ status: 500, data: [] })),
-        findAllRoles().catch(() => ({ status: 500, data: [] })),
-        findAllDisplayViews().catch(() => ({ status: 500, data: [] })),
-      ]);
-      if (uRes.status === 200 || uRes.data) setUsers(uRes.data || []);
-      if (wsRes.status === 200 || wsRes.data) setRawWorkspaces(wsRes.data || []);
-      if (rRes.status === 200 || rRes.data) setRolesList(rRes.data || []);
-      if (dvRes.status === 200 || dvRes.data) setAllDisplayViews(dvRes.data || []);
-    } catch (error) {
-      console.error("Failed to load initial user management data:", error);
-    }
-  };
-
   const fetchUsers = async () => {
-    try {
-      const res = await findAllusers();
-      if (res.status === 200) setUsers(res.data || []);
-    } catch (error) { console.error(error); }
+    await fetchUsersCtx(true);
   };
 
   const fetchWorkspaces = async () => {
-    try {
-      const res = await findAllWorkspaces();
-      if (res.status === 200) setRawWorkspaces(res.data || []);
-    } catch (error) { console.error(error); }
+    await fetchWorkspacesCtx(true);
   };
 
   const formatNameFromEmail = (emailStr: string) => {
@@ -154,7 +139,8 @@ const UserMaster = () => {
   // STEP 2: Submit to backend
   const submitUserToBackend = async (data: any, wsIds: number[], rptIds: number[], dvIds: number[]) => {
     try {
-      const isAdm = data.role.toLowerCase().includes("admin");
+      const roleArray = (data.role || "").split(',').map((r: string) => r.trim().toLowerCase());
+      const isAdm = roleArray.includes("admin");
       const payload: any = {
         id: selectedUser?.id || undefined,
         name: data.name.trim(),
@@ -168,7 +154,7 @@ const UserMaster = () => {
       };
 
       const res: any = await createUser(payload);
-      if (res.status === 200 || res.status === 201) {
+      if (res.status === 200 || res.status === 201 || res?.data || res?.id) {
         toast.success(selectedUser ? "User updated successfully" : "User added successfully");
         fetchUsers();
         handleCancel();

@@ -17,7 +17,7 @@ export class ReportService {
     ){}
 
     findAllReports(){
-        return this.reportRepository.find({relations:['workspace','columns','display_view_names','users']})
+        return this.reportRepository.find({relations:['workspace','columns','display_view_names']})
     }
 
     findReportsByWorkspaceId(workspaceid:number){
@@ -120,7 +120,7 @@ export class ReportService {
     }
 
   findAllDisplayViews(){
-    return this.displayviewRepository.find({relations:['report','report.workspace','displayview_columns','users']})
+    return this.displayviewRepository.find({relations:['report','report.workspace','displayview_columns']})
   }
 
   findDisplayViewByReportId(reportId:number){

@@ -41,6 +41,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { useData } from "@/context/DataContext";
+
 type Report_View = {
   id?: number;
   workspace_id: number;
@@ -55,15 +57,23 @@ const displayViewSchema = z.object({
 });
 
 const DisplayView = () => {
+  const {
+    workspaces: rawWorkspaces,
+    displayViews: rawDisplayViews,
+    fetchWorkspaces: fetchWorkspacesCtx,
+    fetchDisplayViews: fetchDisplayViewsCtx,
+  } = useData();
+
   const [selectedReportView, setSelectedReportView] = useState<any>({});
-  const [workspaces, setWorkspaces] = useState<any>([]);
   const [reports, setReports] = useState<any>([]);
   const [selectedReport, setSelectedReport] = useState<any>();
   const [selectedFilters, setSelectedFilters] = useState<any>([]);
   const [selectedColumn, setSelectedColumn] = useState("");
   const [selectedFunction, setSelectedFunction] = useState("no filter");
   const [selectedParameter, setSelectedParameter] = useState("");
-  const [displayViews, setDisplayViews] = useState<any>([]);
+
+  const workspaces = (rawWorkspaces || []).map((ws: any) => ({ value: ws.id, label: ws.name }));
+  const displayViews = rawDisplayViews || [];
 
   const form = useForm<z.infer<typeof displayViewSchema>>({
     resolver: zodResolver(displayViewSchema),
@@ -75,19 +85,16 @@ const DisplayView = () => {
   });
 
   useEffect(() => {
-    fetchWorkspaces();
-    fetchAllDisplayViews();
+    fetchWorkspacesCtx();
+    fetchDisplayViewsCtx();
   }, []);
 
   const fetchWorkspaces = async () => {
-    try {
-      const res = await findAllWorkspaces();
-      if (res.status === 200) {
-        setWorkspaces(res.data.map((ws: any) => ({ value: ws.id, label: ws.name })));
-      }
-    } catch (error) {
-      console.error(error);
-    }
+    await fetchWorkspacesCtx(true);
+  };
+
+  const fetchAllDisplayViewsData = async () => {
+    await fetchDisplayViewsCtx(true);
   };
 
   const fetchReports = async (workspaceId: number) => {
@@ -110,12 +117,7 @@ const DisplayView = () => {
   };
 
   const fetchAllDisplayViews = async () => {
-    try {
-      const response = await findAllDisplayViews();
-      if (response.status === 200) {
-        setDisplayViews(response.data);
-      }
-    } catch (error) {}
+    await fetchDisplayViewsCtx(true);
   };
 
   const onSubmit = async (data: Report_View) => {

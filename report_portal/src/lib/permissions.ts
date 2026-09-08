@@ -58,14 +58,14 @@ export function getUserPermissions(): UserPermissions {
     const email = String(decoded.email || "").toLowerCase();
     const userid = String(decoded.userid || "").toLowerCase();
 
+    const userRoleList = (decoded.role || "").split(',').map((r: string) => r.trim().toLowerCase());
     const isAdmin =
       decoded.is_admin === true ||
       decoded.isAdmin === true ||
-      rawRole.includes("admin") ||
-      roles.some((r) => String(r).toLowerCase().includes("admin")) ||
-      email.includes("admin") ||
-      userid.includes("admin") ||
-      email === "admin@hgusa.com";
+      userRoleList.includes("admin") ||
+      roles.some((r) => String(r).trim().toLowerCase() === "admin") ||
+      email === "admin@hgusa.com" ||
+      userid === "admin";
 
     const userPerms: string[] = Array.isArray(decoded.permissions) ? decoded.permissions : [];
 

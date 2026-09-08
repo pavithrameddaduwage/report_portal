@@ -158,16 +158,17 @@ export class AuthService {
         const newUser = new User();
         newUser.name = aduser.cn || username;
         newUser.email = email;
-        newUser.is_admin = username.toLowerCase().includes('admin') || email.toLowerCase().includes('admin');
+        newUser.is_admin = username.toLowerCase() === 'admin' || email.toLowerCase() === 'admin@hgusa.com';
         newUser.role = newUser.is_admin ? 'Admin' : 'User';
         existingDbUser = await this.userRepository.save(newUser);
       }
 
+      const userRolesList = String(existingDbUser?.role || '').split(',').map(r => r.trim().toLowerCase());
       isUserAdmin =
         Boolean(existingDbUser?.is_admin) ||
-        String(existingDbUser?.role || '').toLowerCase().includes('admin') ||
-        email.toLowerCase().includes('admin') ||
-        username.toLowerCase().includes('admin');
+        userRolesList.includes('admin') ||
+        email.toLowerCase() === 'admin@hgusa.com' ||
+        username.toLowerCase() === 'admin';
 
       userRole = existingDbUser?.role || (isUserAdmin ? 'Admin' : 'User');
 
