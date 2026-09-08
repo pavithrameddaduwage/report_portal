@@ -251,7 +251,7 @@ export default function WorkspacesPage() {
                   </div>
 
                   {/* Reports List inside Card (2 per row, clean layout without outlines/shadings) */}
-                  <div className="my-1 min-h-[250px] max-h-[380px] overflow-y-auto pr-1">
+                  <div className={`my-1 overflow-y-auto pr-1 ${displayworkspaces.length <= 2 ? "min-h-[420px] max-h-[650px]" : "min-h-[250px] max-h-[380px]"}`}>
                     {authReports.length === 0 ? (
                       <div className="h-full flex items-center justify-center py-8">
                         <span className="text-[11px] text-[#8aa6bf] italic">
