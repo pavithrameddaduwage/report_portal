@@ -156,9 +156,9 @@ export class UsersService implements OnModuleInit {
       displayviewIds.length ? this.userRepository.manager.getRepository(DisplayView).findBy({ id: In(displayviewIds) }) : [],
     ]);
 
-    const reports: Report[] = validReports.map(({ id }) => ({ id } as Report));
-    const workspaces: Workspace[] = validWorkspaces.map(({ id }) => ({ id } as Workspace));
-    const displayviews: DisplayView[] = validDisplayviews.map(({ id }) => ({ id } as DisplayView));
+    let reports: Report[] = validReports.map(({ id }) => ({ id } as Report));
+    let workspaces: Workspace[] = validWorkspaces.map(({ id }) => ({ id } as Workspace));
+    let displayviews: DisplayView[] = validDisplayviews.map(({ id }) => ({ id } as DisplayView));
 
     let userEntity: User;
     if (user.id && Number(user.id) > 0) {
@@ -175,15 +175,38 @@ export class UsersService implements OnModuleInit {
         })) || new User();
     }
 
+    const roleList = (user.role || '').split(',').map((r: string) => r.trim().toLowerCase());
+    userEntity.is_admin = user.is_admin === true || roleList.includes('admin');
+    userEntity.role = user.role || (userEntity.is_admin ? 'Admin' : 'User');
+
+    const isSuperUser = roleList.includes('super user') || roleList.includes('superuser');
+    if (isSuperUser) {
+      const [allWorkspaces, allReports, allDisplayViews] = await Promise.all([
+        this.userRepository.manager.getRepository(Workspace).find(),
+        this.userRepository.manager.getRepository(Report).find(),
+        this.userRepository.manager.getRepository(DisplayView).find(),
+      ]);
+      workspaces = allWorkspaces.map(({ id }) => ({ id } as Workspace));
+      reports = allReports.map(({ id }) => ({ id } as Report));
+      displayviews = allDisplayViews.map(({ id }) => ({ id } as DisplayView));
+      user.workspaceIds = workspaces.map(w => w.id);
+      user.reportIds = reports.map(r => r.id);
+      user.displayviewIds = displayviews.map(dv => dv.id);
+    }
+
+    const targetWsIds = (user.workspaceIds || []).map(Number);
+    const targetRptIds = (user.reportIds || []).map(Number);
+    const targetDvIds = (user.displayviewIds || []).map(Number);
+
     const previousWorkspaceIds = (userEntity.workspaces || []).map(({ id }) => id);
     const previousReportIds = (userEntity.reports || []).map(({ id }) => id);
     const previousDisplayviewIds = (userEntity.displayviews || []).map(({ id }) => id);
-    const addWorkspaceIds = workspaceIds.filter((id) => !previousWorkspaceIds.includes(id));
-    const addReportIds = reportIds.filter((id) => !previousReportIds.includes(id));
-    const addDisplayviewIds = displayviewIds.filter((id) => !previousDisplayviewIds.includes(id));
-    const removeWorkspaceIds = previousWorkspaceIds.filter((id) => !workspaceIds.includes(id));
-    const removeReportIds = previousReportIds.filter((id) => !reportIds.includes(id));
-    const removeDisplayviewIds = previousDisplayviewIds.filter((id) => !displayviewIds.includes(id));
+    const addWorkspaceIds = targetWsIds.filter((id) => !previousWorkspaceIds.includes(id));
+    const addReportIds = targetRptIds.filter((id) => !previousReportIds.includes(id));
+    const addDisplayviewIds = targetDvIds.filter((id) => !previousDisplayviewIds.includes(id));
+    const removeWorkspaceIds = previousWorkspaceIds.filter((id) => !targetWsIds.includes(id));
+    const removeReportIds = previousReportIds.filter((id) => !targetRptIds.includes(id));
+    const removeDisplayviewIds = previousDisplayviewIds.filter((id) => !targetDvIds.includes(id));
 
     userEntity.name = user.name;
     userEntity.email = user.email;
@@ -193,9 +216,6 @@ export class UsersService implements OnModuleInit {
     userEntity.workspaces = undefined as any;
     userEntity.reports = undefined as any;
     userEntity.displayviews = undefined as any;
-    const roleList = (user.role || '').split(',').map((r: string) => r.trim().toLowerCase());
-    userEntity.is_admin = user.is_admin === true || roleList.includes('admin');
-    userEntity.role = user.role || (userEntity.is_admin ? 'Admin' : 'User');
 
     const output = await this.userRepository.save(userEntity);
 

@@ -63,6 +63,40 @@ const UserMaster = () => {
   const selectedRptSet = useMemo(() => new Set(selectedReportIds), [selectedReportIds]);
   const selectedDvSet = useMemo(() => new Set(selectedDisplayViewIds), [selectedDisplayViewIds]);
 
+  // Memoized System-wide IDs for Select All & Super User auto-assignment
+  const allSystemWsIds = useMemo(() => (rawWorkspaces || []).map((w: any) => w.id), [rawWorkspaces]);
+  const allSystemRptIds = useMemo(() => (rawWorkspaces || []).flatMap((w: any) => (w.reports || []).map((r: any) => r.id)), [rawWorkspaces]);
+  const allSystemDvIds = useMemo(() => {
+    const ids: number[] = [];
+    (rawWorkspaces || []).forEach((w: any) => {
+      (w.reports || []).forEach((r: any) => {
+        ids.push(0 - r.id);
+        const dvs = displayViewsByReportId[r.id] || [];
+        dvs.forEach((dv: any) => ids.push(dv.id));
+      });
+    });
+    return ids;
+  }, [rawWorkspaces, displayViewsByReportId]);
+
+  const isAllSelectedInModal = useMemo(() => {
+    if (allSystemWsIds.length === 0) return false;
+    return allSystemWsIds.every(id => selectedWsSet.has(id)) &&
+           allSystemRptIds.every(id => selectedRptSet.has(id)) &&
+           allSystemDvIds.every(id => selectedDvSet.has(id));
+  }, [allSystemWsIds, allSystemRptIds, allSystemDvIds, selectedWsSet, selectedRptSet, selectedDvSet]);
+
+  const handleToggleSelectAllModal = () => {
+    if (isAllSelectedInModal) {
+      setSelectedWorkspaceIds([]);
+      setSelectedReportIds([]);
+      setSelectedDisplayViewIds([]);
+    } else {
+      setSelectedWorkspaceIds([...allSystemWsIds]);
+      setSelectedReportIds([...allSystemRptIds]);
+      setSelectedDisplayViewIds([...allSystemDvIds]);
+    }
+  };
+
   // Existing Users Pagination & Search state
   const [tableSearch, setTableSearch] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -160,17 +194,24 @@ const UserMaster = () => {
     toast.success(`Loaded credentials for ${adUser.name}`);
   };
 
-  // STEP 1: Add User Form submission -> Opens Step 2 Modal
+  // STEP 1: Add User Form submission -> Opens Step 2 Modal or saves directly if Admin / Super User
   const onProceedToPermissions = (data: any) => {
     const role = selectedRoles.join(", ");
     form.setValue("role", role, { shouldValidate: true });
     data = { ...data, role };
-    const isAdm = selectedRoles.some(r => r.toLowerCase() === "admin");
+    const roleLowerArray = selectedRoles.map(r => r.toLowerCase().trim());
+    const isAdm = roleLowerArray.includes("admin");
+    const isSuper = roleLowerArray.includes("super user") || roleLowerArray.includes("superuser");
+
     if (isAdm) {
-       // Admins get everything, skip modal
+       // Admins get admin rights, skip modal
        submitUserToBackend(data, [], [], []);
+    } else if (isSuper) {
+       // Super Users get ALL workspaces, reports, and display views in system automatically, skip modal!
+       const cleanDvIds = allSystemDvIds.filter(id => id > 0);
+       submitUserToBackend(data, allSystemWsIds, allSystemRptIds, cleanDvIds);
     } else {
-       // Open the wizard
+       // Open the wizard modal for granular workspace user allocation
        setIsAccessModalOpen(true);
     }
   };
@@ -249,7 +290,15 @@ const UserMaster = () => {
     setSelectedReportIds(userRptIds);
     setSelectedDisplayViewIds(userDvIds);
     setIsBulkMode(false);
-    setIsAccessModalOpen(true);
+
+    const isSuperOrAdmin = rolesArray.some((r: string) => {
+      const rl = r.toLowerCase().trim();
+      return rl === "admin" || rl === "super user" || rl === "superuser";
+    });
+
+    if (!isSuperOrAdmin) {
+      setIsAccessModalOpen(true);
+    }
   };
 
   const handleCancel = () => {
@@ -458,7 +507,10 @@ const UserMaster = () => {
             <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3f9]">
               <Button type="button" variant="outline" onClick={handleCancel} className="h-8 text-xs px-4 rounded-md border-[#dce6f1] text-[#335375]">Clear</Button>
               <Button type="submit" className="h-8 text-xs px-5 rounded-md bg-[#0e2947] hover:bg-[#163e6b] text-white font-semibold">
-                {selectedRoles.some(r => r.toLowerCase() === "admin") ? "Save User" : "Next"}
+                {selectedRoles.some(r => {
+                  const rl = r.toLowerCase().trim();
+                  return rl === "admin" || rl === "super user" || rl === "superuser";
+                }) ? "Save User" : "Next"}
               </Button>
             </div>
           </form>
