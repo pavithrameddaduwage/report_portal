@@ -58,7 +58,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         userDb?.is_admin === true ||
         userRoles.some((r: string) => r === "admin" || r === "administrator");
 
-      const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
+      const isSuperUser = isAdmin || userRoles.some((r: string) => r === "super user" || r === "superuser");
 
       if (wsRes.status === "fulfilled" && wsRes.value?.status === 200) {
         const data = wsRes.value.data;
@@ -69,7 +69,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((value: number) => !isNaN(value)) : [];
 
         const hasWsRole = userRoles.some((r: string) => r.includes('user') || r.includes('wsmember') || r === 'workspace user') || workspaceids.length > 0 || reportids.length > 0;
-        const isAdminOnly = isAdmin && !isSuperUser && !hasWsRole;
+        const isAdminOnly = false;
 
         if (isAdminOnly) {
           router.push("/admin/user_management");
@@ -122,7 +122,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
           tempuser?.is_admin === true ||
           userRoles.some((r: string) => r === "admin" || r === "administrator"));
 
-      const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
+      const isSuperUser = isAdmin || userRoles.some((r: string) => r === "super user" || r === "superuser");
       
       const targetWs = currentWs || workspace;
       const wsNameLower = String(targetWs?.name || "").toLowerCase();

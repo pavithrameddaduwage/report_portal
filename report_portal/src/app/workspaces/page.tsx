@@ -87,21 +87,18 @@ export default function WorkspacesPage() {
       }
 
       const userRoles: string[] = (userDb?.role ? userDb.role.split(',') : [rawRole]).map((r: string) => r.trim().toLowerCase());
-      const isSuperUser = userRoles.some((r: string) => r === "super user" || r === "superuser");
       const isAdmin =
         isAdminToken ||
         userDb?.is_admin === true ||
         userRoles.some((r: string) => r === "admin" || r === "administrator");
+      const isSuperUser =
+        isAdmin ||
+        userRoles.some((r: string) => r === "super user" || r === "superuser");
 
       const workspaceids = userDb && userDb.workspaces ? userDb.workspaces.map((ws: any) => Number(ws.id)) : [];
       const reportids = userDb && userDb.reports ? userDb.reports.map((rpt: any) => Number(rpt.id)) : [];
       const displayviewReportids = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.report?.id || dv.reportId)).filter((id: number) => !isNaN(id) && id > 0) : [];
       const userAssignedDvIds = userDb && userDb.displayviews ? userDb.displayviews.map((dv: any) => Number(dv.id)) : [];
-
-      if (isAdmin && !isSuperUser && !isSilent) {
-        router.push("/admin/user_management");
-        return;
-      }
 
       const finalworkspaces = rawWorkspaces
         .map((ws: any) => {
@@ -230,7 +227,7 @@ export default function WorkspacesPage() {
           No workspaces or authorized reports found.
         </div>
       ) : (
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 w-full ${displayworkspaces.length <= 2 ? "flex-1 min-h-0 mb-2" : ""}`}>
+        <div className={`grid gap-5 w-full ${displayworkspaces.length > 2 ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2 flex-1 min-h-0 mb-2"}`}>
           {displayworkspaces.map((workspace: any) => {
             const authReports = (workspace.reports || []).filter((r: any) => r.authorized !== false);
 
@@ -250,7 +247,7 @@ export default function WorkspacesPage() {
                     </span>
                   </div>
 
-                  {/* Reports List inside Card (2 per row, clean layout without outlines/shadings) */}
+                  {/* Reports List inside Card (1 column, tight padding between names) */}
                   <div className={`my-1 overflow-y-auto pr-1 ${displayworkspaces.length <= 2 ? "flex-1 min-h-0" : "min-h-[250px] max-h-[380px]"}`}>
                     {authReports.length === 0 ? (
                       <div className="h-full flex items-center justify-center py-8">
@@ -259,14 +256,14 @@ export default function WorkspacesPage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                      <div className="flex flex-col gap-0.5">
                         {authReports.map((rep: any) => (
                           <Link
                             key={rep.id}
                             href={`/workspaces/${workspace.id}?reportId=${rep.id}`}
-                            className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-[#edf4fa] transition-colors group min-w-0"
+                            className="flex items-center gap-2 py-0.5 px-1.5 rounded-md hover:bg-[#edf4fa] transition-colors group min-w-0"
                           >
-                            <FileText className="w-4 h-4 text-[#2f8fe0] shrink-0" />
+                            <FileText className="w-3.5 h-3.5 text-[#2f8fe0] shrink-0" />
                             <span className="text-[13px] font-semibold text-[#0a1c30] group-hover:text-[#2f8fe0] transition-colors truncate" title={rep.report_name}>
                               {rep.report_name}
                             </span>

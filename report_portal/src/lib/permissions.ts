@@ -63,12 +63,6 @@ export function getUserPermissions(): UserPermissions {
 
     const userRoleList = (decoded.role || "").split(',').map((r: string) => r.trim().toLowerCase());
 
-    // Super User: Full access to ALL Workspaces & Reports
-    const isSuperUser =
-      userRoleList.includes("super user") ||
-      userRoleList.includes("superuser") ||
-      roles.some((r) => String(r).trim().toLowerCase() === "super user" || String(r).trim().toLowerCase() === "superuser");
-
     // Admin: Full access to Admin Panel
     const isAdmin =
       decoded.is_admin === true ||
@@ -79,14 +73,21 @@ export function getUserPermissions(): UserPermissions {
       email === "admin@hgusa.com" ||
       userid === "admin";
 
+    // Super User: Full access to ALL Workspaces & Reports
+    const isSuperUser =
+      isAdmin ||
+      userRoleList.includes("super user") ||
+      userRoleList.includes("superuser") ||
+      roles.some((r) => String(r).trim().toLowerCase() === "super user" || String(r).trim().toLowerCase() === "superuser");
+
     const hasWorkspaceRole =
       isSuperUser ||
       userRoleList.some((r: string) => r.includes("user") || r.includes("wsmember") || r === "workspace user") ||
       (Array.isArray(decoded.workspaces) && decoded.workspaces.length > 0);
 
-    const isAdminOnly = isAdmin && !isSuperUser && !hasWorkspaceRole;
+    const isAdminOnly = false;
     const canAccessAdminPanel = isAdmin;
-    const canAccessWorkspaces = isSuperUser || hasWorkspaceRole || !isAdminOnly;
+    const canAccessWorkspaces = true;
 
     const userPerms: string[] = Array.isArray(decoded.permissions) ? decoded.permissions : [];
 
