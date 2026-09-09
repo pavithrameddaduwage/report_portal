@@ -10,7 +10,7 @@ import { jwtDecode } from "jwt-decode";
 const navItems = [
   { href: "/workspaces", label: "WORKSPACES" },
   {
-    href: "/admin/report_configuration",
+    href: "/admin/user_management",
     label: "ADMIN PANEL",
     adminOnly: true,
   },

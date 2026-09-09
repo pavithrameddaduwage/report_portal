@@ -56,7 +56,18 @@ export function getUserPermissions(): UserPermissions {
 
   try {
     const decoded: any = jwtDecode(token);
-    const roles: string[] = Array.isArray(decoded.roles) ? decoded.roles : [];
+    const roles: string[] = Array.from(
+      new Map<string, string>(
+        (Array.isArray(decoded.roles) ? decoded.roles : [])
+          .map((role: any) => String(role).trim())
+          .filter(Boolean)
+          .map((role: string) => [role.toLowerCase(), role] as const),
+      ).values(),
+    );
+    const hasSuperUserRole = roles.some((role) => ['super user', 'superuser'].includes(role.toLowerCase()));
+    const displayRoles = hasSuperUserRole
+      ? roles.filter((role) => !['admin', 'administrator'].includes(role.toLowerCase()))
+      : roles;
     const rawRole = String(decoded.role || "").toLowerCase();
     const email = String(decoded.email || "").toLowerCase();
     const userid = String(decoded.userid || "").toLowerCase();
@@ -103,7 +114,7 @@ export function getUserPermissions(): UserPermissions {
     const canFilterSort = isAdmin || isSuperUser || hasPerm("filter_sort");
 
     return {
-      user: decoded,
+      user: { ...decoded, roles: displayRoles },
       isAdmin,
       isSuperUser,
       isAdminOnly,

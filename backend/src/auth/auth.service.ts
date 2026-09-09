@@ -105,7 +105,7 @@ export class AuthService {
         name: 'Admin',
         userid: 'admin',
         role: 'Admin',
-        roles: ['Admin', 'admin'],
+        roles: ['Admin'],
         permissions: allPermissions,
         is_admin: true,
         department: 'MIS',
@@ -205,22 +205,21 @@ export class AuthService {
         });
       }
 
-      if (totalUsersCount === 0) {
-        // First user to ever log in is automatically appointed as Administrator!
-        console.log(`[First-Time Setup] No users in database. Appointing first login user (${email}) as Administrator.`);
-        const firstAdmin = new User();
-        firstAdmin.name = aduser?.cn || cleanUsername;
-        firstAdmin.email = email;
-        firstAdmin.is_admin = true;
-        firstAdmin.role = 'Admin';
-        existingDbUser = await this.userRepository.save(firstAdmin);
+      if (totalUsersCount === 0 && !existingDbUser) {
+        // The first AD login is a regular user; administrators must be assigned explicitly.
+        const firstUser = new User();
+        firstUser.name = aduser?.cn || cleanUsername;
+        firstUser.email = email;
+        firstUser.is_admin = false;
+        firstUser.role = 'User';
+        existingDbUser = await this.userRepository.save(firstUser);
       } else if (!existingDbUser) {
         // Auto-create new user upon AD login if not yet in database
         const newUser = new User();
         newUser.name = aduser?.cn || cleanUsername;
         newUser.email = email;
-        newUser.is_admin = cleanUsername.toLowerCase() === 'admin' || email.toLowerCase() === 'admin@hgusa.com';
-        newUser.role = newUser.is_admin ? 'Admin' : 'User';
+        newUser.is_admin = false;
+        newUser.role = 'User';
         existingDbUser = await this.userRepository.save(newUser);
       }
 
@@ -275,12 +274,24 @@ export class AuthService {
 
     const displayName = existingDbUser?.name || aduser?.cn || cleanUsername;
 
+    const roles = Array.from(
+      new Map(
+        [userRole, ...(isUserAdmin ? ['Admin'] : [])]
+          .filter(Boolean)
+          .map((role) => [role.toLowerCase(), role] as const),
+      ).values(),
+    );
+    const hasSuperUserRole = roles.some((role) => ['super user', 'superuser'].includes(role.toLowerCase()));
+    const displayRoles = hasSuperUserRole
+      ? roles.filter((role) => !['admin', 'administrator'].includes(role.toLowerCase()))
+      : roles;
+
     const payload = {
       email: email,
       name: displayName,
       userid: cleanUsername,
       role: userRole,
-      roles: isUserAdmin ? ['Admin', userRole] : [userRole],
+      roles: displayRoles,
       permissions: permissions,
       is_admin: isUserAdmin,
       department: aduser?.department || null,

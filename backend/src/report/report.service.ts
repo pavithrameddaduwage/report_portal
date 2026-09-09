@@ -37,8 +37,28 @@ export class ReportService {
     }
 
     async createReport(data:any){
+      const reportName = String(data.report_name || '').trim();
+      const workspaceId = Number(data.workspaceId);
+      if (!reportName || !Number.isInteger(workspaceId) || workspaceId <= 0) {
+        throw new ConflictException('Report name and workspace are required.');
+      }
+
+      const duplicateQuery = this.reportRepository
+        .createQueryBuilder('report')
+        .where('LOWER(report.report_name) = LOWER(:reportName)', { reportName })
+        .andWhere('workspace.id = :workspaceId', { workspaceId })
+        .leftJoin('report.workspace', 'workspace');
+
+      if (data.id && Number(data.id) > 0) {
+        duplicateQuery.andWhere('report.id != :reportId', { reportId: Number(data.id) });
+      }
+
+      if (await duplicateQuery.getOne()) {
+        throw new ConflictException(`A report named "${reportName}" already exists in this workspace.`);
+      }
+
         const report=new Report()
-        report.report_name=data.report_name
+      report.report_name=reportName
         report.report_view=data.report_view
         report.database_schema=data.database_schema
         report.id=data.id

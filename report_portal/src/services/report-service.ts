@@ -25,8 +25,8 @@ export const createReport = async (data: any): Promise<any> => {
     return response;
   } catch (error: any) {
     const status = error?.response?.status;
-    if (status === 500) {
-      toast.error("Report name is duplicated");
+    if (status === 409 || status === 500) {
+      toast.error(error?.response?.data?.message || "A report with this name already exists in the workspace");
     } else {
       toast.error(`An error occurred: ${status || "Unknown error"}`);
     }

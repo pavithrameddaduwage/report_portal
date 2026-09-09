@@ -173,7 +173,9 @@ export function AppSidebar() {
           {permissions.canAccessAdminPanel && (
             <Link
               href={
-                permissions.canConfigureReports
+                permissions.canManageUsers
+                  ? "/admin/user_management"
+                  : permissions.canConfigureReports
                   ? "/admin/report_configuration"
                   : permissions.canScheduleReports
                   ? "/admin/report_scheduler"

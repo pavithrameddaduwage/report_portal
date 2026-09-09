@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, Index } from "typeorm";
 
 import { ReportColumns } from "./report-columns.entity";
 import { Workspace } from "src/workspace/entities/workspace.entity";
@@ -7,11 +7,12 @@ import { DisplayView } from "./displayview.entity";
 
 
 @Entity()
+@Index('UQ_report_workspace_name', ['workspace', 'report_name'], { unique: true })
 export class Report {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({unique:true})
+  @Column()
   report_name: string;
 
   @Column({nullable: true})

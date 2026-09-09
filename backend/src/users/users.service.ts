@@ -30,7 +30,6 @@ export class UsersService implements OnModuleInit {
 
   async onModuleInit() {
     await this.seedDefaultRolesAndPermissions();
-    await this.seedAdminUser();
     await this.syncUserRolesTable();
   }
 
