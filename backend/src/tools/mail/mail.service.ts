@@ -59,6 +59,7 @@ export class MailService {
             <p>This email confirms that your SMTP server (${process.env.SMTP_HOST || 'mail.smtp2go.com'}) is properly configured and functioning in Horizon Report Portal.</p>
             <p><strong>Sent To:</strong> ${toEmail}</p>
             <p><strong>Sent At:</strong> ${new Date().toUTCString()}</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 16px;">This is an automated email from Horizon Group USA.</p>
           </div>
         `,
       });
@@ -108,9 +109,9 @@ export class MailService {
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f1f5f9; color: #0f172a; }
     .email-wrapper { width: 100%; padding: 32px 0; background-color: #f1f5f9; }
     .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-    .email-header { background: #0b2138; padding: 24px 28px; color: #ffffff; }
-    .brand-title { font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 6px 0; }
-    .header-title { margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
+    .email-header { background: #ffffff; padding: 24px 28px 16px 28px; border-bottom: 1px solid #e2e8f0; }
+    .brand-title { font-size: 11px; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 6px 0; }
+    .header-title { margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }
     .email-body { padding: 28px; }
     .message-text { font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 20px 0; }
     .summary-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background-color: #f8fafc; margin-top: 16px; margin-bottom: 8px; }
@@ -163,7 +164,7 @@ export class MailService {
       </div>
 
       <div class="email-footer">
-        This is an automated delivery from <strong>Horizon Report Portal &bull; Team MIS</strong>.<br/>
+        This is an automated email from Horizon Group USA.<br/>
         Please do not reply directly to this automated email.
       </div>
     </div>

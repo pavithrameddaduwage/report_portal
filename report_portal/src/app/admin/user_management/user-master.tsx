@@ -493,10 +493,10 @@ const UserMaster = () => {
             <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3f9]">
               <Button type="button" variant="outline" onClick={handleCancel} className="h-8 text-xs px-4 rounded-md border-[#dce6f1] text-[#335375]">Clear</Button>
               <Button type="submit" className="h-8 text-xs px-5 rounded-md bg-[#0e2947] hover:bg-[#163e6b] text-white font-semibold">
-                {selectedRoles.some(r => {
+                {selectedUser ? "Save" : (selectedRoles.some(r => {
                   const rl = r.toLowerCase().trim();
                   return rl === "admin" || rl === "super user" || rl === "superuser";
-                }) ? "Save User" : "Next"}
+                }) ? "Save" : "Next")}
               </Button>
             </div>
           </form>
@@ -809,7 +809,9 @@ const UserMaster = () => {
               } else {
                 submitUserToBackend(form.getValues(), selectedWorkspaceIds, selectedReportIds, selectedDisplayViewIds.filter(id => id > 0));
               }
-            }} className="bg-[#0e2947] hover:bg-[#163e6b] text-white text-xs h-8 px-6 font-semibold">Finished</Button>
+            }} className="bg-[#0e2947] hover:bg-[#163e6b] text-white text-xs h-8 px-6 font-semibold">
+              {selectedUser ? "Update" : (isBulkMode ? "Save" : "Finished")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
