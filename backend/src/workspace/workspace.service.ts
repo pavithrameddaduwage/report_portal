@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Workspace } from './entities/workspace.entity';
 import { Report } from 'src/report/entities/report.entity';
 import { DisplayView } from 'src/report/entities/displayview.entity';
-import { RoleMaster } from 'src/users/entities/role_master.entity';
 import { In, Repository } from 'typeorm';
 
 @Injectable()
@@ -17,8 +16,6 @@ export class WorkspaceService implements OnModuleInit {
         private readonly reportRepository: Repository<Report>,
         @InjectRepository(DisplayView)
         private readonly displayViewRepository: Repository<DisplayView>,
-        @InjectRepository(RoleMaster)
-        private readonly roleRepository: Repository<RoleMaster>,
     ) {}
 
     private async syncSequence(tableName: string = 'workspace', idColumn: string = 'id') {
@@ -130,28 +127,6 @@ export class WorkspaceService implements OnModuleInit {
                 throw err;
             }
         }
-        
-        try {
-            // Automatically add a role for this workspace if it doesn't exist
-            if (createdWorkspace && createdWorkspace.name) {
-                const roleName = `${createdWorkspace.name} WSMember`;
-                const existingRole = await this.roleRepository.findOne({ where: { role: roleName }});
-                if (!existingRole) {
-                    await this.syncSequence('role_master', 'id');
-                    const newRole = new RoleMaster();
-                    newRole.role = roleName;
-                    newRole.permissions = JSON.stringify(['filter_sort']);
-                    await this.roleRepository.save(newRole).catch(async () => {
-                        await this.syncSequence('role_master', 'id');
-                        return this.roleRepository.save(newRole);
-                    });
-                    this.logger.log(`Auto-created role: ${roleName} for workspace ${createdWorkspace.name}`);
-                }
-            }
-        } catch (e) {
-            this.logger.error(`Error auto-creating role for workspace: ${e?.message}`);
-        }
-        
         return createdWorkspace;
     }
 
