@@ -17,13 +17,13 @@ const authOptions:any = {
         }
 
         const config = {
-          url: process.env.LDAP_URL || "ldaps://HGUNBXDC01VM.Horizongroupusa.com",
-          baseDN: process.env.LDAP_BASE_DN || "dc=Horizongroupusa,dc=com",
-          username: process.env.LDAP_USERNAME || 'MISSVCACC',
-          password: process.env.LDAP_PASSWORD || 'Horizon@MIS',
+          url: process.env.LDAP_URL || '',
+          baseDN: process.env.LDAP_BASE_DN || '',
+          username: process.env.LDAP_USERNAME || '',
+          password: process.env.LDAP_PASSWORD || '',
         };
 
-        const ad = new ActiveDirectory(config);
+        const ad = new ActiveDirectory(config as any);
 
         try {
           // ✅ 1️⃣ Authenticate user

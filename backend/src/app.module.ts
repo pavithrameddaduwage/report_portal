@@ -21,22 +21,22 @@ import { DataSource } from 'typeorm';
     TypeOrmModule.forRoot({
       name: 'default',
       type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
+      host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'Belpostgre123',
-      database: process.env.DB_NAME || 'report_portal_db',
+      username: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: true,
     }),
     TypeOrmModule.forRoot({
       name: 'datawarehouse',
       type: 'postgres',
-      host: process.env.DW_HOST || process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DW_PORT || process.env.DB_PORT || '5432', 10),
-      username: process.env.DW_USER || process.env.DB_USER || 'postgres',
-      password: process.env.DW_PASSWORD || process.env.DB_PASSWORD || 'Belpostgre123',
-      database: process.env.DW_NAME || process.env.DB_NAME || 'report_portal_db',
+      host: process.env.DW_HOST,
+      port: parseInt(process.env.DW_PORT || '5432', 10),
+      username: process.env.DW_USER,
+      password: process.env.DW_PASSWORD,
+      database: process.env.DW_NAME,
       synchronize: false,
       retryAttempts: 2,
       retryDelay: 2000,
@@ -55,14 +55,14 @@ export class AppModule implements OnModuleInit {
   constructor(
     @InjectDataSource('default') private readonly defaultDataSource: DataSource,
     @InjectDataSource('datawarehouse') private readonly dwDataSource: DataSource,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     if (this.defaultDataSource.isInitialized) {
-      console.log('✅ Connected to PostgreSQL Database (report_portal_db)');
+      console.log(`✅ Connected to PostgreSQL Database (${process.env.DB_NAME || 'default'})`);
     }
     if (this.dwDataSource.isInitialized) {
-      console.log('✅ Connected to Datawarehouse Database');
+      console.log(`✅ Connected to Datawarehouse Database (${process.env.DW_NAME || 'dw'})`);
     }
   }
 }

@@ -29,8 +29,20 @@ export class UsersService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    await this.ensureSchemaCompatibility();
     await this.seedDefaultRolesAndPermissions();
     await this.syncUserRolesTable();
+  }
+
+  async ensureSchemaCompatibility() {
+    try {
+      await this.userRepository.query(`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "role" VARCHAR(255) DEFAULT 'User';`);
+      await this.userRepository.query(`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "is_active" BOOLEAN DEFAULT true;`);
+      await this.userRepository.query(`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "is_admin" BOOLEAN DEFAULT false;`);
+      await this.userRepository.query(`ALTER TABLE "role_master" ADD COLUMN IF NOT EXISTS "permissions" TEXT;`);
+    } catch (err) {
+      console.warn('Schema compatibility check notice:', err?.message);
+    }
   }
 
   async syncUserRolesTable() {

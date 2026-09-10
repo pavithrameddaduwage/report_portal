@@ -9,10 +9,10 @@ import { ADUser } from './interfaces/ad-user.interface';
 const ActiveDirectory = require('activedirectory2');
 
 const config = {
-    url: process.env.LDAP_URL || 'ldap://HGUNBXDC01VM.Horizongroupusa.com',
-    baseDN: process.env.LDAP_BASE_DN || 'dc=Horizongroupusa,dc=com',
-    username: process.env.LDAP_USERNAME || 'MISSVCACC',
-    password: process.env.LDAP_PASSWORD || 'Horizon@MIS',
+    url: process.env.LDAP_URL,
+    baseDN: process.env.LDAP_BASE_DN,
+    username: process.env.LDAP_USERNAME,
+    password: process.env.LDAP_PASSWORD,
     attributes:{
       user:[]
     },

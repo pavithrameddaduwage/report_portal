@@ -5,11 +5,11 @@ import { DataSource } from "typeorm";
 
 const AppDWDataSource = new DataSource({
   type: "postgres",
-  host: process.env.DW_HOST || '10.15.1.37',
-  port: Number(process.env.DW_PORT) || 7102,
-  username: process.env.DW_USER || 'hgbi_view',
-  password: process.env.DW_PASSWORD || 'hgbi_view',
-  database: process.env.DW_NAME || 'postgres',
+  host: process.env.DW_HOST,
+  port: Number(process.env.DW_PORT) || 5432,
+  username: process.env.DW_USER,
+  password: process.env.DW_PASSWORD,
+  database: process.env.DW_NAME,
   synchronize: false, // disable in production
   logging: false,
 });
