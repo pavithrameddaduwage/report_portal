@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -8,38 +9,70 @@ import { ADUser } from './interfaces/ad-user.interface';
 
 const ActiveDirectory = require('activedirectory2');
 
-const config = {
-    url: process.env.LDAP_URL,
-    baseDN: process.env.LDAP_BASE_DN,
-    username: process.env.LDAP_USERNAME,
-    password: process.env.LDAP_PASSWORD,
-    attributes:{
-      user:[]
-    },
-    tlsOptions: {
-      rejectUnauthorized: false,
-    },
-    timeout: 5000,  
-    reconnect: false,
-    connectTimeout: 5000,
-};
-const ad = new ActiveDirectory(config);
-
 @Injectable()
 export class AuthService {
+  private ad: any = null;
+  private adInitialized = false;
+
   constructor(
     private jwtService: JwtService,
+    private configService: ConfigService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(RoleMaster)
     private roleRepository: Repository<RoleMaster>,
   ) {}
 
+  private getADClient(): any {
+    if (this.adInitialized) {
+      return this.ad;
+    }
+    this.adInitialized = true;
+
+    const url = this.configService.get<string>('LDAP_URL') || process.env.LDAP_URL;
+    const baseDN = this.configService.get<string>('LDAP_BASE_DN') || process.env.LDAP_BASE_DN;
+    const username = this.configService.get<string>('LDAP_USERNAME') || process.env.LDAP_USERNAME;
+    const password = this.configService.get<string>('LDAP_PASSWORD') || process.env.LDAP_PASSWORD;
+
+    if (!url) {
+      console.warn('⚠️ [AuthService] LDAP_URL is not configured in environment variables. Active Directory authentication is disabled.');
+      return null;
+    }
+
+    try {
+      this.ad = new ActiveDirectory({
+        url,
+        baseDN,
+        username,
+        password,
+        attributes: {
+          user: [],
+        },
+        tlsOptions: {
+          rejectUnauthorized: false,
+        },
+        timeout: 5000,
+        reconnect: false,
+        connectTimeout: 5000,
+      });
+      return this.ad;
+    } catch (err: any) {
+      console.error('❌ [AuthService] Failed to initialize ActiveDirectory client:', err?.message || err);
+      return null;
+    }
+  }
+
   async authenticateuser(username: string, password: string, timeoutMs = 5000): Promise<boolean> {
+    const client = this.getADClient();
+    if (!client) {
+      console.warn(`AD authentication skipped for ${username}: ActiveDirectory client is not configured.`);
+      return false;
+    }
+
     try {
       console.log('Attempting AD authentication for:', username);
       const authPromise = new Promise<boolean>((resolve) => {
-        ad.authenticate(username, password, (err: any, auth: boolean) => {
+        client.authenticate(username, password, (err: any, auth: boolean) => {
           if (err) {
             console.log('AD authentication notice:', err?.message);
             resolve(false);
@@ -61,9 +94,14 @@ export class AuthService {
   }
 
   async getADUserDetails(username: string): Promise<ADUser> {
+    const client = this.getADClient();
+    if (!client) {
+      return null as any;
+    }
+
     try {
       const detailsPromise = new Promise<ADUser>((resolve) => {
-        ad.findUser(username, function (err: any, user: ADUser) {
+        client.findUser(username, function (err: any, user: ADUser) {
           if (err || !user) {
             resolve(null as any);
           } else {
@@ -327,46 +365,50 @@ export class AuthService {
     }
 
     // 2. Query Active Directory LDAP
-    const searchQuery = `(&(objectClass=user)(|(cn=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)))`;
+    const client = this.getADClient();
     let adMatches: any[] = [];
 
-    try {
-      const adPromise = new Promise<any[]>((resolve) => {
-        let isDone = false;
-        try {
-          ad.findUsers(searchQuery, false, (err: any, users: any[]) => {
-            if (isDone) return;
-            isDone = true;
-            if (err || !users || !Array.isArray(users)) {
-              return resolve([]);
+    if (client) {
+      const searchQuery = `(&(objectClass=user)(|(cn=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)))`;
+
+      try {
+        const adPromise = new Promise<any[]>((resolve) => {
+          let isDone = false;
+          try {
+            client.findUsers(searchQuery, false, (err: any, users: any[]) => {
+              if (isDone) return;
+              isDone = true;
+              if (err || !users || !Array.isArray(users)) {
+                return resolve([]);
+              }
+              const formatted = users
+                .filter((f: any) => f && (f.mail || f.cn || f.sAMAccountName))
+                .map((f: any) => ({
+                  name: f.cn || f.displayName || f.sAMAccountName || '',
+                  email: (f.mail || `${f.sAMAccountName}@horizongroupusa.com`).toLowerCase().trim(),
+                  department: f.department || '',
+                }));
+              resolve(formatted);
+            });
+          } catch (e) {
+            if (!isDone) {
+              isDone = true;
+              resolve([]);
             }
-            const formatted = users
-              .filter((f: any) => f && (f.mail || f.cn || f.sAMAccountName))
-              .map((f: any) => ({
-                name: f.cn || f.displayName || f.sAMAccountName || '',
-                email: (f.mail || `${f.sAMAccountName}@horizongroupusa.com`).toLowerCase().trim(),
-                department: f.department || '',
-              }));
-            resolve(formatted);
-          });
-        } catch (e) {
-          if (!isDone) {
-            isDone = true;
-            resolve([]);
           }
-        }
 
-        setTimeout(() => {
-          if (!isDone) {
-            isDone = true;
-            resolve([]);
-          }
-        }, 3000);
-      });
+          setTimeout(() => {
+            if (!isDone) {
+              isDone = true;
+              resolve([]);
+            }
+          }, 3000);
+        });
 
-      adMatches = await adPromise;
-    } catch (e) {
-      console.warn('AD user search notice:', e?.message);
+        adMatches = await adPromise;
+      } catch (e) {
+        console.warn('AD user search notice:', e?.message);
+      }
     }
 
     // Merge and deduplicate by email
