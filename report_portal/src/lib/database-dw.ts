@@ -6,7 +6,7 @@ import { DataSource } from "typeorm";
 const AppDWDataSource = new DataSource({
   type: "postgres",
   host: process.env.DW_HOST,
-  port: Number(process.env.DW_PORT) || 5432,
+  port: Number(process.env.DW_PORT),
   username: process.env.DW_USER,
   password: process.env.DW_PASSWORD,
   database: process.env.DW_NAME,
