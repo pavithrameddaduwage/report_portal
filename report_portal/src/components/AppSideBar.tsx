@@ -132,9 +132,9 @@ export function AppSidebar() {
     try {
       localStorage.removeItem("access_token");
       sessionStorage.clear();
-      window.location.href = "/login";
+      window.location.href = "/report-portal/login";
     } catch (error) {
-      window.location.href = "/login";
+      window.location.href = "/report-portal/login";
     }
   };
 

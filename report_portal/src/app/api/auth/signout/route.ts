@@ -3,7 +3,7 @@ import { signOut } from "next-auth/react";
 
 export async function GET(request: Request) {
 
-  const response = NextResponse.redirect(new URL("/login", request.url));
+  const response = NextResponse.redirect(new URL("/report-portal/login", request.url));
 
   // Clear cookies
   response.cookies.set("next-auth.session-token", "", {
