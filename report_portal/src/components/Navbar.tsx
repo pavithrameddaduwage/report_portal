@@ -54,12 +54,12 @@ const Navbar = () => {
       <div className="flex items-center gap-3">
         <Link href="/workspaces" className="flex items-center gap-3">
           <img 
-            src="/horizontal-blue-hgu-logo.png" 
+            src="/report-portal/horizontal-blue-hgu-logo.png" 
             alt="Horizon Group USA" 
             className="h-7 object-contain"
             onError={(e: any) => {
               e.target.onerror = null;
-              e.target.src = "/horizontal-blue-hgu-logo.png";
+              e.target.src = "/report-portal/horizontal-blue-hgu-logo.png";
             }}
           />
           <span className="text-[#00c0f3] text-[20px] font-normal tracking-tight ml-2">

@@ -1,17 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   devIndicators: false,
-  async rewrites() {
-    return [
-      {
-        source: '/report-portal/:path*',
-        destination: '/:path*',
-      },
-    ];
-  },
+  assetPrefix: '/report-portal/',
+  basePath: '/report-portal',
+  trailingSlash: true,
 };
-
+ 
 module.exports = nextConfig;
-
-
-
+ 

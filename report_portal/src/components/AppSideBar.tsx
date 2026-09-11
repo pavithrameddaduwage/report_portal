@@ -143,7 +143,7 @@ export function AppSidebar() {
       {/* Brand Header */}
       <div className="px-5 py-6 flex items-center gap-3">
         <img
-          src="/logo.png"
+          src="/report-portal/logo.png"
           alt="Horizon Logo"
           className="w-8 h-8 object-contain shrink-0"
         />

@@ -84,7 +84,7 @@ export default function LoginPage() {
             {/* Outer Glowing Ring */}
             <div className="w-24 h-24 rounded-full border-4 border-[#2f8fe0]/20 border-t-[#2f8fe0] animate-spin" />
             <img
-              src="/logo.png"
+              src="/report-portal/logo.png"
               alt="Horizon Logo"
               className="w-12 h-12 object-contain absolute brightness-0 invert animate-pulse"
             />
@@ -106,7 +106,7 @@ export default function LoginPage() {
         {/* Top Logo */}
         <div className="p-12 z-10 flex items-center">
           <img
-            src="/logo.png"
+            src="/report-portal/logo.png"
             alt="Horizon Logo"
             className="w-16 h-16 object-contain drop-shadow-sm brightness-0 invert"
           />
