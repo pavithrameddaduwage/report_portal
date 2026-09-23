@@ -15,6 +15,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Horizon Report Portal",
   description: "Horizon Group USA Report Portal",
+  icons: {
+    icon: "/report-portal/logo.png",
+    shortcut: "/report-portal/logo.png",
+    apple: "/report-portal/logo.png",
+  },
 };
 
 export default function RootLayout({

@@ -164,12 +164,13 @@ const AdvancedTable = ({
       let datacolumns: any[] = [];
       (resData.columns || []).forEach((col: any) => {
         const colName = typeof col === "string" ? col : col.column;
+        const colDisplayName = typeof col === "object" && col.displayName ? col.displayName : undefined;
         const displaycolumn = (displaycolumns || []).find((f: any) => f.column === colName);
-        let displayname = displaycolumn && displaycolumn.displayName ? displaycolumn.displayName : colName;
+        let displayname = (displaycolumn && displaycolumn.displayName) || colDisplayName || colName;
         datacolumns.push({
           column: colName,
           displayName: displayname,
-          filter_type: typeof col === "object" ? col.filter_type : displaycolumn?.filter_type,
+          filter_type: typeof col === "object" && col.filter_type ? col.filter_type : displaycolumn?.filter_type,
         });
       });
       resData.columns = datacolumns;

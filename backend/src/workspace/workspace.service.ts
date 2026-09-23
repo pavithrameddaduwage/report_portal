@@ -99,11 +99,11 @@ export class WorkspaceService implements OnModuleInit {
 
 
     async findAllWorkspaces() {
-        return this.workspaceRepository.find({ relations: ['reports', 'reports.display_view_names', 'reports.users', 'users'] });
+        return this.workspaceRepository.find({ relations: ['reports', 'reports.columns', 'reports.display_view_names', 'reports.users', 'users'] });
     }
 
     findWorkspaceById(id: any) {
-        return this.workspaceRepository.findOne({ where: { id: id }, relations: ['reports', 'users'] });
+        return this.workspaceRepository.findOne({ where: { id: id }, relations: ['reports', 'reports.columns', 'reports.display_view_names', 'users'] });
     }
 
     async createWorkspace(workspace: any) {

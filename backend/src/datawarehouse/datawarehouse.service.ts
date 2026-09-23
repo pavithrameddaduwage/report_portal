@@ -127,6 +127,11 @@ export class DatawarehouseService {
             filter_type: 'text',
           }));
         }
+      } else {
+        activeColumns = activeColumns.map((c: any) => ({
+          ...c,
+          displayName: c.displayName && String(c.displayName).trim() ? c.displayName : c.column,
+        }));
       }
 
       if (activeColumns.length === 0) {
