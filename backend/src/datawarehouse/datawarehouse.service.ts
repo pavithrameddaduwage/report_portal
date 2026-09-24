@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import * as ExcelJS from 'exceljs';
 import { DisplayViewColumns } from 'src/report/entities/displayview-columns.entity';
 import { ReportColumns } from 'src/report/entities/report-columns.entity';
 import { generateExcelStream } from 'src/tools/excel/excel.service';
@@ -63,6 +64,107 @@ export class DatawarehouseService {
     }
   }
 
+  private async resolveActiveColumns(data: {
+    view: string;
+    schema: string;
+    reportid?: number;
+    display_view?: number;
+  }): Promise<any[]> {
+    const { view, schema, reportid, display_view } = data;
+    let activeColumns: any[] = [];
+
+    if (reportid) {
+      activeColumns = await this.reportColumnsRepository.find({
+        where: { hidden: false, report: { id: reportid } },
+        select: ['column', 'displayName', 'filter_type'],
+        order: { sort_order: 'asc' },
+      });
+    }
+
+    if (display_view) {
+      const displayviewcolumns = await this.displayviewColumnsRepository.find({
+        where: { displayview: { id: display_view } },
+      });
+      displayviewcolumns.forEach((column: any) => {
+        if (column.function === 'hide') {
+          activeColumns = activeColumns.filter((f: any) => f.column !== column.column);
+        }
+      });
+    }
+
+    if (activeColumns.length === 0) {
+      const colList = await this.getColumnListBySchemaAndView({ view, schema });
+      if ('columns' in colList && Array.isArray(colList.columns)) {
+        activeColumns = colList.columns.map((c: string) => ({
+          column: c,
+          displayName: c,
+          filter_type: 'text',
+        }));
+      }
+    } else {
+      activeColumns = activeColumns.map((c: any) => ({
+        ...c,
+        displayName: c.displayName && String(c.displayName).trim() ? c.displayName : c.column,
+      }));
+    }
+
+    return activeColumns;
+  }
+
+  private buildQueryAndParams(
+    schema: string,
+    view: string,
+    activeColumns: any[],
+    columnfilter: any = {},
+    sortField: string = '',
+    sortOrder: string = 'asc',
+  ): { query: string; queryParams: any[]; tempcolumns: string[] } {
+    const selectedColumns = activeColumns.map((col) => `"${col.column}"`).join(', ');
+    const tempcolumns = activeColumns.map((col) => col.column);
+
+    let query = `SELECT ${selectedColumns} FROM "${schema}"."${view}"`;
+    const whereConditions: string[] = [];
+    const queryParams: any[] = [];
+
+    if (columnfilter && typeof columnfilter === 'object') {
+      Object.entries(columnfilter).forEach(([key, filterVal]: any) => {
+        if (tempcolumns.includes(key) && filterVal) {
+          const val = filterVal.value !== undefined ? filterVal.value : filterVal;
+          const fType = filterVal.filter_type || '';
+
+          if (fType === 'dropdown' && Array.isArray(val) && val.length > 0) {
+            whereConditions.push(`"${key}"::text = ANY($${queryParams.length + 1})`);
+            queryParams.push(val);
+          } else if (fType === 'number_range' && val) {
+            if (val.min !== '' && val.min !== undefined && val.max !== '' && val.max !== undefined) {
+              whereConditions.push(`"${key}" BETWEEN $${queryParams.length + 1} AND $${queryParams.length + 2}`);
+              queryParams.push(val.min, val.max);
+            } else if (val.min !== '' && val.min !== undefined) {
+              whereConditions.push(`"${key}" >= $${queryParams.length + 1}`);
+              queryParams.push(val.min);
+            } else if (val.max !== '' && val.max !== undefined) {
+              whereConditions.push(`"${key}" <= $${queryParams.length + 1}`);
+              queryParams.push(val.max);
+            }
+          } else if (val !== '' && val !== null && val !== undefined) {
+            whereConditions.push(`"${key}"::text ILIKE $${queryParams.length + 1}`);
+            queryParams.push(`%${val}%`);
+          }
+        }
+      });
+    }
+
+    if (whereConditions.length > 0) {
+      query += ` WHERE ${whereConditions.join(' AND ')}`;
+    }
+
+    if (sortField && tempcolumns.includes(sortField)) {
+      query += ` ORDER BY "${sortField}" ${sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}`;
+    }
+
+    return { query, queryParams, tempcolumns };
+  }
+
   async getReportByParameters(data: {
     view: string;
     schema: string;
@@ -83,7 +185,6 @@ export class DatawarehouseService {
       pageSize = 15,
       sortField = '',
       sortOrder = 'asc',
-      filter = '',
       columnfilter = {},
       download = false,
       reportid,
@@ -95,93 +196,23 @@ export class DatawarehouseService {
         return { data: [], columns: [], totalRecords: 0, rowCount: 0 };
       }
 
-      // Fetch active columns for report
-      let activeColumns: any[] = [];
-      if (reportid) {
-        activeColumns = await this.reportColumnsRepository.find({
-          where: { hidden: false, report: { id: reportid } },
-          select: ['column', 'displayName', 'filter_type'],
-          order: { sort_order: 'asc' },
-        });
-      }
-
-      let displayviewcolumns: any[] = [];
-      if (display_view) {
-        displayviewcolumns = await this.displayviewColumnsRepository.find({
-          where: { displayview: { id: display_view } },
-        });
-        displayviewcolumns.forEach((column: any) => {
-          if (column.function === 'hide') {
-            activeColumns = activeColumns.filter((f: any) => f.column !== column.column);
-          }
-        });
-      }
-
-      if (activeColumns.length === 0) {
-        // If columns are not yet configured in metadata, query from view schema
-        const colList = await this.getColumnListBySchemaAndView({ view, schema });
-        if ('columns' in colList && Array.isArray(colList.columns)) {
-          activeColumns = colList.columns.map((c: string) => ({
-            column: c,
-            displayName: c,
-            filter_type: 'text',
-          }));
-        }
-      } else {
-        activeColumns = activeColumns.map((c: any) => ({
-          ...c,
-          displayName: c.displayName && String(c.displayName).trim() ? c.displayName : c.column,
-        }));
-      }
-
+      const activeColumns = await this.resolveActiveColumns({ view, schema, reportid, display_view });
       if (activeColumns.length === 0) {
         return { data: [], columns: [], totalRecords: 0, rowCount: 0 };
       }
 
-      const selectedColumns = activeColumns.map((col) => `"${col.column}"`).join(', ');
-      const tempcolumns = activeColumns.map((col) => col.column);
+      const { query: baseQuery, queryParams } = this.buildQueryAndParams(
+        schema,
+        view,
+        activeColumns,
+        columnfilter,
+        sortField,
+        sortOrder,
+      );
 
-      let query = `SELECT ${selectedColumns} FROM "${schema}"."${view}"`;
-      let whereConditions: string[] = [];
-      const queryParams: any[] = [];
-
-      if (columnfilter && typeof columnfilter === 'object') {
-        Object.entries(columnfilter).forEach(([key, filterVal]: any) => {
-          if (tempcolumns.includes(key) && filterVal) {
-            const val = filterVal.value !== undefined ? filterVal.value : filterVal;
-            const fType = filterVal.filter_type || '';
-
-            if (fType === 'dropdown' && Array.isArray(val) && val.length > 0) {
-              whereConditions.push(`"${key}"::text = ANY($${queryParams.length + 1})`);
-              queryParams.push(val);
-            } else if (fType === 'number_range' && val) {
-              if (val.min !== '' && val.min !== undefined && val.max !== '' && val.max !== undefined) {
-                whereConditions.push(`"${key}" BETWEEN $${queryParams.length + 1} AND $${queryParams.length + 2}`);
-                queryParams.push(val.min, val.max);
-              } else if (val.min !== '' && val.min !== undefined) {
-                whereConditions.push(`"${key}" >= $${queryParams.length + 1}`);
-                queryParams.push(val.min);
-              } else if (val.max !== '' && val.max !== undefined) {
-                whereConditions.push(`"${key}" <= $${queryParams.length + 1}`);
-                queryParams.push(val.max);
-              }
-            } else if (val !== '' && val !== null && val !== undefined) {
-              whereConditions.push(`"${key}"::text ILIKE $${queryParams.length + 1}`);
-              queryParams.push(`%${val}%`);
-            }
-          }
-        });
-      }
-
-      if (whereConditions.length > 0) {
-        query += ` WHERE ${whereConditions.join(' AND ')}`;
-      }
-
-      if (sortField && tempcolumns.includes(sortField)) {
-        query += ` ORDER BY "${sortField}" ${sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}`;
-      }
-
+      let query = baseQuery;
       let totalRecords = 0;
+
       if (!download) {
         const countQuery = `SELECT COUNT(*) as count FROM (${query}) as total_count`;
         const countResult = await this.entityManager.query(countQuery, queryParams);
@@ -190,6 +221,7 @@ export class DatawarehouseService {
         query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
         queryParams.push(pageSize, (page - 1) * pageSize);
       } else {
+        // Safe cap for synchronous in-memory JSON fetching
         query += ` LIMIT 50000`;
       }
 
@@ -243,8 +275,82 @@ export class DatawarehouseService {
   }
 
   async downloadReport(data: any): Promise<PassThrough> {
-    const reportResult = await this.getReportByParameters({ ...data, download: true });
-    const tempcolumns = (reportResult.columns || []).map((c: any) => c.column);
-    return generateExcelStream(tempcolumns, reportResult.data, reportResult.columns);
+    const stream = new PassThrough();
+
+    (async () => {
+      try {
+        const { view, schema, sortField = '', sortOrder = 'asc', columnfilter = {}, reportid, display_view } = data;
+
+        if (!view || !schema) {
+          stream.end();
+          return;
+        }
+
+        const activeColumns = await this.resolveActiveColumns({ view, schema, reportid, display_view });
+        if (activeColumns.length === 0) {
+          stream.end();
+          return;
+        }
+
+        const { query: baseQuery, queryParams } = this.buildQueryAndParams(
+          schema,
+          view,
+          activeColumns,
+          columnfilter,
+          sortField,
+          sortOrder,
+        );
+
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream });
+        const worksheet = workbook.addWorksheet('Report');
+
+        worksheet.columns = activeColumns.map((col) => ({
+          header: col.displayName || col.column,
+          key: col.column,
+          width: Math.max((col.displayName || col.column).length + 4, 12),
+        }));
+
+        const headerRow = worksheet.getRow(1);
+        headerRow.eachCell((cell) => {
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        });
+        headerRow.commit();
+
+        // Stream from DB in safe batches of 5000 rows
+        const CHUNK_SIZE = 5000;
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const chunkParams = [...queryParams, CHUNK_SIZE, offset];
+          const chunkQuery = `${baseQuery} LIMIT $${chunkParams.length - 1} OFFSET $${chunkParams.length}`;
+          const chunkRows = await this.entityManager.query(chunkQuery, chunkParams);
+
+          if (!chunkRows || chunkRows.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          for (const row of chunkRows) {
+            worksheet.addRow(row).commit();
+          }
+
+          offset += chunkRows.length;
+          if (chunkRows.length < CHUNK_SIZE) {
+            hasMore = false;
+            break;
+          }
+        }
+
+        await workbook.commit();
+      } catch (err) {
+        console.error('Error during chunked excel generation:', err);
+        stream.destroy(err);
+      }
+    })();
+
+    return stream;
   }
 }

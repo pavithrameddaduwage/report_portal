@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,7 +10,7 @@ import { ADUser } from './interfaces/ad-user.interface';
 const ActiveDirectory = require('activedirectory2');
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private ad: any = null;
   private adInitialized = false;
 
@@ -22,6 +22,28 @@ export class AuthService {
     @InjectRepository(RoleMaster)
     private roleRepository: Repository<RoleMaster>,
   ) {}
+
+  async onModuleInit() {
+    // Pre-warm Active Directory connection upon server startup so first login is instant
+    try {
+      const client = this.getADClient();
+      if (client) {
+        console.log('🔄 [AuthService] Pre-warming Active Directory connection on startup...');
+        const adAdminUser = this.configService.get<string>('LDAP_USERNAME') || process.env.LDAP_USERNAME;
+        if (adAdminUser) {
+          client.findUser(adAdminUser, (err: any) => {
+            if (err) {
+              console.log('ℹ️ [AuthService] AD initial warm-up probe completed with notice:', err?.message || 'Ready');
+            } else {
+              console.log('✅ [AuthService] Active Directory connection pre-warmed successfully.');
+            }
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn('⚠️ [AuthService] AD pre-warming encountered an issue (will retry on demand):', err?.message || err);
+    }
+  }
 
   private getADClient(): any {
     if (this.adInitialized) {
@@ -46,14 +68,15 @@ export class AuthService {
         username,
         password,
         attributes: {
-          user: [],
+          user: ['cn', 'mail', 'department', 'sAMAccountName', 'userPrincipalName'],
         },
         tlsOptions: {
           rejectUnauthorized: false,
         },
-        timeout: 5000,
-        reconnect: false,
-        connectTimeout: 5000,
+        timeout: 10000,
+        reconnect: true,
+        connectTimeout: 10000,
+        idleTimeout: 30000,
       });
       return this.ad;
     } catch (err: any) {
@@ -62,7 +85,7 @@ export class AuthService {
     }
   }
 
-  async authenticateuser(username: string, password: string, timeoutMs = 5000): Promise<boolean> {
+  async authenticateuser(username: string, password: string, timeoutMs = 10000): Promise<boolean> {
     const client = this.getADClient();
     if (!client) {
       console.warn(`AD authentication skipped for ${username}: ActiveDirectory client is not configured.`);
@@ -110,7 +133,7 @@ export class AuthService {
         });
       });
 
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000));
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
       return (await Promise.race([detailsPromise, timeoutPromise])) as ADUser;
     } catch (e) {
       return null as any;
