@@ -359,30 +359,40 @@ const AdvancedTable = ({
 
       {/* Pagination */}
       {data && data.data && data.data.length > 0 && (
-        <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#335375]">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page === 1}
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            className="h-7 text-xs font-semibold text-[#0a1c30] hover:bg-white hover:border hover:border-[#dce6f1]"
-          >
-            <ChevronLeft size={14} className="mr-1" /> Previous
-          </Button>
+        <div className="flex items-center justify-between mt-4 text-xs text-[#335375] px-1">
+          <div className="text-xs text-[#5c7f9f]">
+            Showing <span className="font-semibold text-[#0a1c30]">{(page - 1) * pageSize + 1}</span> to{" "}
+            <span className="font-semibold text-[#0a1c30]">
+              {Math.min(page * pageSize, data.totalRecords || data.data.length)}
+            </span>{" "}
+            of <span className="font-semibold text-[#0a1c30]">{(data.totalRecords || data.data.length).toLocaleString()}</span> records
+          </div>
 
-          <span className="font-bold text-[#0a1c30] text-xs">
-            Page {page}
-          </span>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              className="h-7 text-xs font-semibold text-[#0a1c30] hover:bg-white hover:border hover:border-[#dce6f1]"
+            >
+              <ChevronLeft size={14} className="mr-1" /> Previous
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={data.data.length < pageSize}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="h-7 text-xs font-semibold text-[#0a1c30] hover:bg-white hover:border hover:border-[#dce6f1]"
-          >
-            Next <ChevronRight size={14} className="ml-1" />
-          </Button>
+            <span className="font-bold text-[#0a1c30] text-xs">
+              Page {page} {data.totalRecords ? `of ${Math.max(1, Math.ceil(data.totalRecords / pageSize))}` : ""}
+            </span>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={data.totalRecords ? page >= Math.ceil(data.totalRecords / pageSize) : data.data.length < pageSize}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="h-7 text-xs font-semibold text-[#0a1c30] hover:bg-white hover:border hover:border-[#dce6f1]"
+            >
+              Next <ChevronRight size={14} className="ml-1" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
