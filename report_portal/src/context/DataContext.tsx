@@ -173,8 +173,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [fetchUsers, fetchWorkspaces, fetchRoles, fetchDisplayViews, fetchReports]);
 
-  // Automatically trigger background fetch on mount if empty
+  // Automatically trigger background fetch on mount if authenticated and empty
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("access_token");
+      if (!token) return; // Skip fetching if not logged in
+    }
     const hasData = users.length > 0 && workspaces.length > 0;
     fetchAllData(!hasData);
   }, []);

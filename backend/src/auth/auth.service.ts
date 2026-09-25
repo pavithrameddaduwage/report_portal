@@ -85,7 +85,7 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  async authenticateuser(username: string, password: string, timeoutMs = 10000): Promise<boolean> {
+  async authenticateuser(username: string, password: string, timeoutMs = 4000): Promise<boolean> {
     const client = this.getADClient();
     if (!client) {
       console.warn(`AD authentication skipped for ${username}: ActiveDirectory client is not configured.`);
@@ -133,7 +133,7 @@ export class AuthService implements OnModuleInit {
         });
       });
 
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000));
       return (await Promise.race([detailsPromise, timeoutPromise])) as ADUser;
     } catch (e) {
       return null as any;
@@ -182,32 +182,35 @@ export class AuthService implements OnModuleInit {
 
     if (trimmedInput.includes('@')) {
       // User entered a full email (e.g. user@horizongroupusa.com or user@hgusa.com)
-      adauthentication = await this.authenticateuser(trimmedInput, pass);
+      adauthentication = await this.authenticateuser(trimmedInput, pass, 3500);
       if (adauthentication) {
         email = trimmedInput;
       } else {
-        // Retry alternate domain or plain sAMAccountName in case UPN differs
+        // Retry alternate domain and plain sAMAccountName in parallel
         const altDomain = trimmedInput.endsWith('@hgusa.com')
           ? trimmedInput.replace('@hgusa.com', '@horizongroupusa.com')
           : trimmedInput.replace('@horizongroupusa.com', '@hgusa.com');
-        adauthentication = await this.authenticateuser(altDomain, pass);
-        if (adauthentication) {
+        const [resAlt, resClean] = await Promise.all([
+          this.authenticateuser(altDomain, pass, 3500),
+          this.authenticateuser(cleanUsername, pass, 3500),
+        ]);
+        if (resAlt) {
+          adauthentication = true;
           email = altDomain;
-        } else {
-          // Retry plain sAMAccountName
-          adauthentication = await this.authenticateuser(cleanUsername, pass);
-          if (adauthentication) email = `${cleanUsername}@horizongroupusa.com`;
+        } else if (resClean) {
+          adauthentication = true;
+          email = `${cleanUsername}@horizongroupusa.com`;
         }
       }
     } else {
-      // Username only: first try plain sAMAccountName, then domain UPNs
-      adauthentication = await this.authenticateuser(cleanUsername, pass);
+      // Username only: first try plain sAMAccountName, then domain UPNs in parallel
+      adauthentication = await this.authenticateuser(cleanUsername, pass, 3500);
       if (adauthentication) {
         email = `${cleanUsername}@horizongroupusa.com`;
       } else {
         const [res1, res2] = await Promise.all([
-          this.authenticateuser(`${cleanUsername}@horizongroupusa.com`, pass),
-          this.authenticateuser(`${cleanUsername}@hgusa.com`, pass),
+          this.authenticateuser(`${cleanUsername}@horizongroupusa.com`, pass, 3500),
+          this.authenticateuser(`${cleanUsername}@hgusa.com`, pass, 3500),
         ]);
         if (res1) {
           adauthentication = true;
