@@ -98,15 +98,39 @@ export class WorkspaceService implements OnModuleInit {
     }
 
 
-    async findAllWorkspaces() {
-        return this.workspaceRepository.find({ relations: ['reports', 'reports.columns', 'reports.display_view_names', 'reports.users', 'users'] });
+    private wsCache: { data: any; timestamp: number } | null = null;
+    private wsDetailCache = new Map<number, { data: any; timestamp: number }>();
+    private readonly WS_CACHE_TTL = 30000; // 30s cache TTL
+
+    public invalidateCache() {
+        this.wsCache = null;
+        this.wsDetailCache.clear();
     }
 
-    findWorkspaceById(id: any) {
-        return this.workspaceRepository.findOne({ where: { id: id }, relations: ['reports', 'reports.columns', 'reports.display_view_names', 'users'] });
+    async findAllWorkspaces() {
+        if (this.wsCache && (Date.now() - this.wsCache.timestamp < this.WS_CACHE_TTL)) {
+            return this.wsCache.data;
+        }
+        const data = await this.workspaceRepository.find({ relations: ['reports', 'reports.columns', 'reports.display_view_names', 'reports.users', 'users'] });
+        this.wsCache = { data, timestamp: Date.now() };
+        return data;
+    }
+
+    async findWorkspaceById(id: any) {
+        const numId = Number(id);
+        const cached = this.wsDetailCache.get(numId);
+        if (cached && (Date.now() - cached.timestamp < this.WS_CACHE_TTL)) {
+            return cached.data;
+        }
+        const data = await this.workspaceRepository.findOne({ where: { id: numId }, relations: ['reports', 'reports.columns', 'reports.display_view_names', 'users'] });
+        if (data) {
+            this.wsDetailCache.set(numId, { data, timestamp: Date.now() });
+        }
+        return data;
     }
 
     async createWorkspace(workspace: any) {
+        this.invalidateCache();
         if (!workspace.id || workspace.id == 0) {
             delete workspace.id;
         }
@@ -130,11 +154,13 @@ export class WorkspaceService implements OnModuleInit {
         return createdWorkspace;
     }
 
-    deleteWorkspace(workspaceid: any) {
+    async deleteWorkspace(workspaceid: any) {
+        this.invalidateCache();
         return this.workspaceRepository.delete({ id: workspaceid });
     }
 
     async assignUsers(id: number, userIds: number[]) {
+        this.invalidateCache();
         const workspace = await this.workspaceRepository.findOne({ where: { id }, relations: ['users'] });
         if (!workspace) throw new Error('Workspace not found');
 

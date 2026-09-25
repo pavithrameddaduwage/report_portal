@@ -322,11 +322,24 @@ export class UsersService implements OnModuleInit {
     }
   }
 
+  private userEmailCache = new Map<string, { data: any; timestamp: number }>();
+  private readonly USER_CACHE_TTL = 30000; // 30s cache TTL
+
+  public invalidateUserCache() {
+    this.userEmailCache.clear();
+  }
+
   async findUserByEmail(email: string, userId?: string) {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const username = String(userId || normalizedEmail.split('@')[0]).trim().toLowerCase();
+    const cacheKey = `${normalizedEmail}:${username}`;
 
-    return this.userRepository.findOne({
+    const cached = this.userEmailCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < this.USER_CACHE_TTL)) {
+      return cached.data;
+    }
+
+    const data = await this.userRepository.findOne({
       where: [
         { email: ILike(normalizedEmail) },
         ...(username ? [
@@ -336,6 +349,12 @@ export class UsersService implements OnModuleInit {
       ],
       relations: ['workspaces', 'reports', 'displayviews', 'displayviews.report'],
     });
+
+    if (data) {
+      this.userEmailCache.set(cacheKey, { data, timestamp: Date.now() });
+    }
+
+    return data;
   }
 
   findUserById(id: number) {
