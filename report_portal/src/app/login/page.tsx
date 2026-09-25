@@ -118,9 +118,6 @@ export default function LoginPage() {
             Horizon Group USA <br />
             <span className="text-[#4eb4eb]">Report Portal</span>
           </h1>
-          <p className="text-[13px] text-[#8aa6bf] mt-4 max-w-sm">
-            Unified BI and reporting platform powered by Active Directory authentication.
-          </p>
         </div>
 
         {/* Bottom Wavy Graphics */}
