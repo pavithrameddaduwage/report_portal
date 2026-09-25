@@ -1,7 +1,4 @@
-import axios from 'axios';
-import { baseUrl } from './baseUrl';
-
-const API_URL = process.env.INTEGRATION_API_URL || baseUrl;
+import apiClient from './apiClient';
 
 export interface ScheduleRecipient {
   name: string;
@@ -47,45 +44,36 @@ export interface ScheduleLogItem {
   triggered_by: 'SCHEDULE' | 'MANUAL';
 }
 
-const getAuthHeaders = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      return { headers: { Authorization: `Bearer ${token}` } };
-    }
-  }
-  return {};
-};
-
 export const findAllSchedules = async (): Promise<any> => {
-  return axios.get(`${API_URL}/api/scheduler/schedules`, getAuthHeaders());
+  return apiClient.get('/api/scheduler/schedules');
 };
 
 export const createSchedule = async (data: any): Promise<any> => {
-  return axios.post(`${API_URL}/api/scheduler/createSchedule`, data, getAuthHeaders());
+  return apiClient.post('/api/scheduler/createSchedule', data);
 };
 
 export const updateSchedule = async (id: number, data: any): Promise<any> => {
-  return axios.put(`${API_URL}/api/scheduler/updateSchedule/${id}`, data, getAuthHeaders());
+  return apiClient.put(`/api/scheduler/updateSchedule/${id}`, data);
 };
 
 export const deleteSchedule = async (id: number): Promise<any> => {
-  return axios.delete(`${API_URL}/api/scheduler/deleteSchedule/${id}`, getAuthHeaders());
+  return apiClient.delete(`/api/scheduler/deleteSchedule/${id}`);
 };
 
 export const toggleScheduleActive = async (id: number): Promise<any> => {
-  return axios.post(`${API_URL}/api/scheduler/toggleActive/${id}`, {}, getAuthHeaders());
+  return apiClient.post(`/api/scheduler/toggleActive/${id}`, {});
 };
 
 export const runScheduleNow = async (id: number): Promise<any> => {
-  return axios.post(`${API_URL}/api/scheduler/runNow/${id}`, {}, getAuthHeaders());
+  return apiClient.post(`/api/scheduler/runNow/${id}`, {});
 };
 
 export const findAllScheduleLogs = async (): Promise<any> => {
-  return axios.get(`${API_URL}/api/scheduler/logs`, getAuthHeaders());
+  return apiClient.get('/api/scheduler/logs');
 };
 
 export const getSchedulerStats = async (): Promise<any> => {
-  return axios.get(`${API_URL}/api/scheduler/stats`, getAuthHeaders());
+  return apiClient.get('/api/scheduler/stats');
 };
+
 

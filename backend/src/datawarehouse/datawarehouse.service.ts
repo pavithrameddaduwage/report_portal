@@ -220,9 +220,6 @@ export class DatawarehouseService {
 
         query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
         queryParams.push(pageSize, (page - 1) * pageSize);
-      } else {
-        // Safe cap for synchronous in-memory JSON fetching
-        query += ` LIMIT 50000`;
       }
 
       const rows = await this.entityManager.query(query, queryParams);
