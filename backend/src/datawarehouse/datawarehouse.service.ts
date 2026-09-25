@@ -118,11 +118,12 @@ export class DatawarehouseService {
     columnfilter: any = {},
     sortField: string = '',
     sortOrder: string = 'asc',
-  ): { query: string; queryParams: any[]; tempcolumns: string[] } {
+  ): { query: string; countQuery: string; queryParams: any[]; tempcolumns: string[] } {
     const selectedColumns = activeColumns.map((col) => `"${col.column}"`).join(', ');
     const tempcolumns = activeColumns.map((col) => col.column);
 
     let query = `SELECT ${selectedColumns} FROM "${schema}"."${view}"`;
+    let countQuery = `SELECT COUNT(*) as count FROM "${schema}"."${view}"`;
     const whereConditions: string[] = [];
     const queryParams: any[] = [];
 
@@ -155,14 +156,16 @@ export class DatawarehouseService {
     }
 
     if (whereConditions.length > 0) {
-      query += ` WHERE ${whereConditions.join(' AND ')}`;
+      const whereClause = ` WHERE ${whereConditions.join(' AND ')}`;
+      query += whereClause;
+      countQuery += whereClause;
     }
 
     if (sortField && tempcolumns.includes(sortField)) {
       query += ` ORDER BY "${sortField}" ${sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}`;
     }
 
-    return { query, queryParams, tempcolumns };
+    return { query, countQuery, queryParams, tempcolumns };
   }
 
   async getReportByParameters(data: {
@@ -201,7 +204,7 @@ export class DatawarehouseService {
         return { data: [], columns: [], totalRecords: 0, rowCount: 0 };
       }
 
-      const { query: baseQuery, queryParams } = this.buildQueryAndParams(
+      const { query: baseQuery, countQuery, queryParams } = this.buildQueryAndParams(
         schema,
         view,
         activeColumns,
@@ -210,28 +213,33 @@ export class DatawarehouseService {
         sortOrder,
       );
 
-      let query = baseQuery;
-      let totalRecords = 0;
-
       if (!download) {
-        const countQuery = `SELECT COUNT(*) as count FROM (${query}) as total_count`;
-        const countResult = await this.entityManager.query(countQuery, queryParams);
-        totalRecords = parseInt(countResult[0]?.count || '0', 10);
+        const pagedQuery = `${baseQuery} LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        const pagedParams = [...queryParams, pageSize, (page - 1) * pageSize];
 
-        query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-        queryParams.push(pageSize, (page - 1) * pageSize);
+        // Execute count and page slice in parallel for maximum speed
+        const [countResult, rows] = await Promise.all([
+          this.entityManager.query(countQuery, queryParams),
+          this.entityManager.query(pagedQuery, pagedParams),
+        ]);
+
+        const totalRecords = parseInt(countResult[0]?.count || '0', 10);
+
+        return {
+          data: rows,
+          columns: activeColumns,
+          totalRecords,
+          rowCount: totalRecords,
+        };
       }
 
-      const rows = await this.entityManager.query(query, queryParams);
-      if (download) {
-        totalRecords = rows.length;
-      }
+      const rows = await this.entityManager.query(baseQuery, queryParams);
 
       return {
         data: rows,
         columns: activeColumns,
-        totalRecords,
-        rowCount: totalRecords,
+        totalRecords: rows.length,
+        rowCount: rows.length,
       };
     } catch (error) {
       console.error('Datawarehouse query error:', error?.message);
